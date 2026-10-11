@@ -106,7 +106,7 @@ export function createControls({ store, actions, meta, simBar, left }) {
     .map((t) => `<option value="${esc(t.id)}" title="${esc(t.label)}">${esc(L.targetLabels?.[t.id] ?? t.label)}</option>`)
     .join('');
   const tpOpts = (meta.piezometers ?? [])
-    .map((p) => `<option value="${esc(p.id)}">${esc(p.name)}${p.note ? ` — ${esc(p.note)}` : ''}</option>`)
+    .map((p) => `<option value="${esc(p.id)}"${p.note ? ` title="${esc(p.note)}"` : ''}>${esc(L.tpOption(p.name, fmt(p.x, 0)))}</option>`)
     .join('');
   const qualityOpts = (meta.quality ?? []).map((q) => `<option value="${esc(q.id)}">${esc(q.label)}</option>`).join('');
   const stack = Array.from({ length: nMax }, (_, i) => `<span data-i="${nMax - 1 - i}"></span>`).join('');
@@ -379,6 +379,7 @@ export function createControls({ store, actions, meta, simBar, left }) {
     const t = e.target;
     const tag = t?.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON' || t?.isContentEditable) return;
+    if (t?.closest?.('[data-own-keys]')) return; // wilayah yang memakai tombol panah sendiri (tabel bergulir)
     if (store.get().route?.view !== 'sim') return;
     if (e.key === ' ' || e.code === 'Space') {
       e.preventDefault();

@@ -6,6 +6,7 @@ import {
   weirQ,
   classifyTmas,
   safeMaxLogs,
+  emergencyTmasOf,
   CONTROL_RULES,
   CONTROL_TARGETS,
 } from '../../../model/index.js';
@@ -41,7 +42,6 @@ const max0 = (x) => fn('max', [x, mn('0')], ';');
 export function render(c) {
   const w = c.params.weir;
   const rv = c.params.river;
-  const nAuto = safeMaxLogs(w, c.params.geom.zBank);
   return `
 ${p(`Pintu air di ujung saluran utama adalah <strong>ambang berpapan stoplog</strong>. Air saluran baru mengalir ke sungai bila muka air saluran ${im(S.hc)} lebih tinggi daripada <em>mercu</em> (puncak papan teratas). Setiap papan setebal ${fmt(w.plank, 2)} m; menambah satu papan menaikkan mercu sehingga air tertahan lebih lama di saluran, dan muka air tanah di blok ikut tertahan.`)}
 ${p(`Debit memakai rumus ambang standar ${im(row(S.Q, mo('∝'), sup(mi('H'), p32())))}. Bila muka air sungai ${im(S.hr)} naik di atas mercu, ambang menjadi <em>terendam</em> dan debit dikurangi faktor Villemonte ${im(Sfn(mi('r')))}. Bila sungai lebih tinggi daripada saluran, air mengalir <em>balik</em> ke saluran (debit negatif), kecuali pintu klep dipasang.`)}
@@ -51,9 +51,9 @@ ${display(
   eq(
     S.Q,
     cases([
-      [mn('0'), when(S.H1, mo('≤'), mn('0'), mtext(' dan '), S.H2, mo('≤'), mn('0'))],
+      [mn('0'), when(S.H1, mo('≤'), mn('0'), space('0.4em'), mtext('dan'), space('0.4em'), S.H2, mo('≤'), mn('0'))],
       [row(S.Cw, S.Lw, sup(S.H1, p32()), Sfn(ratio(S.H2, S.H1))), when(S.H1, mo('≥'), S.H2)],
-      [row(mo('−'), S.Cw, S.Lw, sup(S.H2, p32()), Sfn(ratio(S.H1, S.H2))), when(S.H2, mo('>'), S.H1, mtext(' (aliran balik)'))],
+      [row(mo('−'), S.Cw, S.Lw, sup(S.H2, p32()), Sfn(ratio(S.H1, S.H2))), when(S.H2, mo('>'), S.H1, space('0.6em'), mtext('(aliran balik)'))],
     ]),
   ),
   '8.3',
@@ -80,17 +80,22 @@ ${display(row(sup(S.Er, mtext('baru')), mo('='), S.Er, mo('+'), paren(row(S.P, m
 ${p(`Persamaan (8.9) adalah penyelesaian eksak (8.8) untuk satu sub-langkah ${im(S.dt)} dengan ${im(S.P)} tetap; ${im(S.P)} di sini dalam mm/hari.`)}
 ${calcBox('pa-river', 'Perhitungan saat ini — sungai')}
 ${h3('Mode otomatis (aturan harian)')}
-${p(`Pada mode <em>Otomatis</em>, jumlah stoplog dievaluasi sekali sehari (pukul 24.00 simulasi) dari kedalaman muka air tanah rata-rata 24 jam terakhir ${im(bar('d'))}: rata-rata empat piezometer untuk target perusahaan, atau rata-rata di titik penaatan untuk target PP. Histeresis ${fmt(CONTROL_RULES.hysteresisCm, 0)} cm dan jeda minimal ${fmt(CONTROL_RULES.minIntervalDays, 0)} hari mencegah papan naik-turun terus-menerus. Jumlah papan maksimum mode otomatis adalah ${nAuto} (mercu tetap ≥ ${fmt(CONTROL_RULES.emergencyTmasCm + 10, 0)} cm di bawah tanggul) agar penambahan papan tidak langsung memicu aturan darurat.`)}
+${p(`Pada mode <em>Otomatis</em>, jumlah stoplog dievaluasi sekali sehari (pukul 24.00 simulasi) dari kedalaman muka air tanah rata-rata 24 jam terakhir di titik penaatan ${im(bar('d'))}, untuk kedua target. Histeresis ${fmt(CONTROL_RULES.hysteresisCm, 0)} cm dan jeda minimal ${fmt(CONTROL_RULES.minIntervalDays, 0)} hari mencegah papan naik-turun terus-menerus. Jumlah papan maksimum dibatasi agar mercu tetap ≥ (ambang darurat TMAS + 10 cm) di bawah tanggul, supaya penambahan papan tidak langsung memicu aturan darurat.`)}
+${table(
+  ['Target', 'Pita [b₁, b₂]', 'Darurat bila TMAS &lt;', 'Papan maks. otomatis'],
+  Object.values(CONTROL_TARGETS).map((t) => [esc(t.label), `${t.band.join('–')} cm`, `${fmt(emergencyTmasOf(t.id), 0)} cm`, String(safeMaxLogs(w, c.params.geom.zBank, t.id))]),
+  { num: [2, 3], cls: 'eq-compact', label: 'Target mode otomatis' },
+)}
 ${table(
   ['Urutan', 'Syarat', 'Tindakan'],
   [
-    ['1. Darurat', `TMAS &lt; ${fmt(CONTROL_RULES.emergencyTmasCm, 0)} cm <em>atau</em> ada genangan, dan ${im(row(S.hr, mo('<'), S.hc, mo('−'), mn(fmt(CONTROL_RULES.riverMarginM, 2))))} m`, `buang ${CONTROL_RULES.emergencyDrop} papan (minimal 0)`],
+    ['1. Darurat', `TMAS &lt; ambang darurat <em>atau</em> ada genangan, dan ${im(row(S.hr, mo('<'), S.hc, mo('−'), mn(fmt(CONTROL_RULES.riverMarginM, 2))))} m`, `buang ${CONTROL_RULES.emergencyDrop} papan (minimal 0)`],
     ['1b. Tahan', `kondisi darurat tetapi sungai tinggi (${im(row(S.hr, mo('≥'), S.hc, mo('−'), mn(fmt(CONTROL_RULES.riverMarginM, 2))))} m)`, 'papan ditahan (membuka hanya memasukkan air sungai)'],
     ['2. Jeda', `kurang dari ${CONTROL_RULES.minIntervalDays} hari sejak perubahan terakhir`, 'tidak ada tindakan'],
-    ['3. Terlalu basah', `${im(row(bar('d'), mo('<'), sub(mi('b'), mn('1')), mo('−'), mn(String(CONTROL_RULES.hysteresisCm))))} cm`, 'kurangi 1 papan'],
-    ['4. Terlalu kering', `${im(row(bar('d'), mo('>'), sub(mi('b'), mn('2')), mo('+'), mn(String(CONTROL_RULES.hysteresisCm))))} cm dan ${im(row(S.n, mo('<'), mn(String(nAuto))))}`, 'tambah 1 papan'],
+    ['3. Terlalu basah', `${im(row(bar('d'), mo('<'), sub(mi('b'), mn('1')), mo('−'), mn(String(CONTROL_RULES.hysteresisCm))))} cm dan ${im(row(S.n, mo('>'), mn('0')))}`, 'kurangi 1 papan'],
+    ['4. Terlalu kering', `${im(row(bar('d'), mo('>'), sub(mi('b'), mn('2')), mo('+'), mn(String(CONTROL_RULES.hysteresisCm))))} cm`, 'tambah 1 papan; bila sudah maksimum → catat "jenuh" (target tidak tercapai)'],
   ],
-  { caption: `Aturan otomatis (pita target [b₁, b₂]: perusahaan ${CONTROL_TARGETS.perusahaan.band.join('–')} cm; PP ${CONTROL_TARGETS.pp.band.join('–')} cm)`, label: 'Aturan mode otomatis' },
+  { caption: 'Aturan otomatis, diperiksa berurutan', label: 'Aturan mode otomatis' },
 )}
 ${calcBox('pa-auto', 'Status pintu air saat ini')}
 `;
@@ -173,7 +178,7 @@ export function live(c) {
   out['pa-calc'] = lines.join('');
 
   // --- tabel stoplog ---
-  const nAuto = safeMaxLogs(w, c.params.geom.zBank);
+  const nAuto = safeMaxLogs(w, c.params.geom.zBank, c.snap.control.target);
   const rows = [];
   for (let n = 0; n <= w.nMax; n++) {
     const cr = crestLevel(n, w);
@@ -215,7 +220,7 @@ export function live(c) {
     lastFull = j;
     break;
   }
-  const dMean = lastFull >= 0 ? (ctl.target === 'pp' ? s.tpDepthCm[lastFull] : s.meanDepthCm[lastFull]) : NaN;
+  const dMean = lastFull >= 0 ? s.tpDepthCm[lastFull] : NaN;
   const al = [];
   al.push(
     textLine(
@@ -225,7 +230,7 @@ export function live(c) {
   if (st.mode === 'auto') {
     al.push(
       textLine(
-        `Target: ${esc(tgt.label)} · pita [${tgt.band.join('; ')}] cm · ${im(bar('d'))} hari terakhir = ${Number.isFinite(dMean) ? `${fmt(dMean, 1)} cm` : 'belum ada (hari pertama)'}`,
+        `Target: ${esc(tgt.label)} · pita [${tgt.band.join('; ')}] cm · darurat bila TMAS &lt; ${fmt(emergencyTmasOf(tgt.id), 0)} cm · ${im(bar('d'))} (${esc(c.snap.ind.tpId)}, hari terakhir) = ${Number.isFinite(dMean) ? `${fmt(dMean, 1)} cm` : 'belum ada (hari pertama)'}`,
       ),
     );
   } else {

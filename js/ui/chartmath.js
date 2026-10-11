@@ -194,8 +194,8 @@ export function chartLayout(width, height, { left = 46, right = 40, top = 16, ga
 export function classBands(classes, [lo, hi]) {
   return classes.map((c) => {
     // kedalaman d ∈ (min, max] → elevasi e = −d ∈ [−max, −min)
-    const top = Math.min(hi, Number.isFinite(c.min) ? -c.min : hi);
-    const bottom = Math.max(lo, Number.isFinite(c.max) ? -c.max : lo);
+    const top = Math.min(hi, Number.isFinite(c.min) ? 0 - c.min : hi);
+    const bottom = Math.max(lo, Number.isFinite(c.max) ? 0 - c.max : lo);
     return { id: c.id, label: c.label, color: c.color, top, bottom };
   }).filter((b) => b.top > b.bottom);
 }

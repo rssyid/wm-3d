@@ -36,7 +36,7 @@ const LEADS = {
   parameter: 'Semua parameter model beserta satuan, arti, dan sumber/asumsinya.',
 };
 
-let paramIds = new WeakMap();
+const paramIds = new WeakMap();
 let paramSeq = 0;
 function paramKey(obj) {
   if (!obj || typeof obj !== 'object') return 0;
@@ -112,6 +112,15 @@ export function createEquations(root, { store, actions, meta }) {
     });
   }
   navSelect.addEventListener('change', () => go(navSelect.value));
+  // tautan antarbagian di dalam isi (#persamaan.<id>)
+  sectionsEl.addEventListener('click', (e) => {
+    const a = e.target.closest?.('a[href^="#persamaan."]');
+    if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const id = a.getAttribute('href').slice('#persamaan.'.length);
+    if (!byId[id]) return;
+    e.preventDefault();
+    go(id);
+  });
   pzSelect.addEventListener('change', () => store.patch('eq', { piezometer: pzSelect.value }));
   freeze.addEventListener('change', () => store.patch('eq', { frozen: freeze.checked }));
 
@@ -263,7 +272,6 @@ ${mod.render(c)}`;
   }
 
   function setCurrent(id) {
-    const prev = state.current;
     state.current = id;
     for (const [k, rec] of state.els) rec.el.hidden = k !== id;
     sectionEl(id).el.hidden = false;
@@ -272,7 +280,6 @@ ${mod.render(c)}`;
       else a.removeAttribute('aria-current');
     }
     if (navSelect.value !== id) navSelect.value = id;
-    return prev !== id;
   }
 
   // ---------- ukuran & tema ----------
@@ -301,13 +308,14 @@ ${mod.render(c)}`;
     show(sectionId) {
       const id = validId(sectionId);
       state.visible = true;
-      const changed = setCurrent(id);
+      setCurrent(id);
       update(!store.get().eq.frozen);
-      if (changed && state.focusNext) {
+      if (state.focusNext) {
+        // navigasi dari sub-menu: mulai dari atas bagian dan pindahkan fokus ke judulnya
+        mainEl.scrollTop = 0;
         root.scrollTop = 0;
         if (root.getBoundingClientRect().top < 0) root.scrollIntoView({ block: 'start' });
-        const h = root.querySelector(`#eq-h-${CSS.escape(id)}`);
-        h?.focus({ preventScroll: true });
+        root.querySelector(`#eq-h-${CSS.escape(id)}`)?.focus({ preventScroll: true });
       }
       state.focusNext = false;
     },

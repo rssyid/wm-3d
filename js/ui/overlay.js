@@ -28,7 +28,7 @@ export function pickContent(info, snap) {
       const p = snap.piezometers.find((x) => x.id === info.id) ?? snap.piezometers.find((x) => x.isTP) ?? snap.piezometers[0];
       return {
         title: P.piezometer(p.id),
-        sub: [P.distance(fmt(p.x, 0)), p.note].filter(Boolean).join(' · '),
+        sub: [P.distance(fmt(p.x, 0)), p.isTP ? P.tpTag : null].filter(Boolean).join(' · '),
         rows: [
           [P.tmat, `${fmtElevCm(p.depthCm)}`, null, depthPhrase(p.depthCm)],
           [P.category, p.cls.label, p.cls],
@@ -181,10 +181,10 @@ export function createOverlay(viewport, { store, actions, meta }) {
       return;
     }
     const r = viewport.getBoundingClientRect();
-    const cx = Number(info.screenX);
-    const cy = Number(info.screenY);
-    // screenX/screenY = koordinat client (MouseEvent.clientX/Y); tanpa koordinat → pojok kanan atas
-    pos = Number.isFinite(cx) && Number.isFinite(cy) ? { x: cx - r.left, y: cy - r.top } : { x: r.width, y: 0 };
+    // scene mengirim screenX/screenY relatif viewport, plus clientX/clientY (koordinat halaman)
+    const cx = Number.isFinite(info.clientX) ? info.clientX - r.left : Number(info.screenX);
+    const cy = Number.isFinite(info.clientY) ? info.clientY - r.top : Number(info.screenY);
+    pos = Number.isFinite(cx) && Number.isFinite(cy) ? { x: cx, y: cy } : { x: r.width, y: 0 };
     card.hidden = false;
     place();
   }

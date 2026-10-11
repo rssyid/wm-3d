@@ -2,7 +2,7 @@
 // tabel, dan baris "Perhitungan saat ini". Murni (tanpa DOM) → bisa dites di Node.
 // Di sini hanya ada format & konversi satuan; angka fisika berasal dari model (explain dkk.).
 import { fmt, fmtSigned, MINUS } from '../format.js';
-import { esc, mi, up, mn, mo, mtext, row, sub, sup, bar, math, imath, paren, fn, space, slash } from './mathml.js';
+import { esc, mi, up, mn, mo, mtext, row, sub, sup, bar, math, imath, paren, fn, space, slash, splitParts } from './mathml.js';
 
 export { esc, fmt, fmtSigned, MINUS };
 
@@ -149,6 +149,7 @@ export const SYM = {
   hr: s('h', 'r'),
   hfd: s('h', 'fd'),
   zfd: s('z', 'fd'),
+  zfdi: sub(mi('z'), row(mi('fd'), mo(','), mi('i'))),
   dfd: s('d', 'fd'),
   sfd: mi('s'),
   zbank: s('z', 'tanggul'),
@@ -236,7 +237,11 @@ export function table(head, rows, { num = [], caption = '', cls = '', rowAttrs, 
 export function symTable(rows, { caption = 'Simbol' } = {}) {
   return table(
     ['Simbol', 'Arti', 'Satuan', 'Nilai saat ini'],
-    rows.map((r) => [sm(r.sym), r.artiHtml ?? esc(r.arti), r.unitHtml ?? esc(r.unit || '–'), r.valHtml ?? esc(r.val ?? '–')]),
+    rows.map((r) => {
+      const u = r.unitHtml ?? esc(r.unit || '–');
+      const uInline = u && u !== '–' ? `<span class="eq-u"> ${u}</span>` : '';
+      return [sm(r.sym), r.artiHtml ?? esc(r.arti), u, `${r.valHtml ?? esc(r.val ?? '–')}${uInline}`];
+    }),
     { num: [3], cls: 'eq-sym', caption: esc(caption), label: caption },
   );
 }
@@ -268,9 +273,14 @@ export function calcBox(key, title = 'Perhitungan saat ini') {
   return `<section class="eq-calc" aria-label="${esc(title)}"><h3 class="eq-calc-title"><span class="eq-dot" aria-hidden="true"></span>${esc(title)}</h3><div class="eq-live" data-live="${esc(key)}"></div></section>`;
 }
 
-/** Persamaan bernomor (blok). */
+/**
+ * Persamaan bernomor (blok). Rumus "A, B" (dipisah koma + spasi di tingkat atas) dipecah menjadi beberapa
+ * <math> yang berdampingan di layar lebar dan turun ke baris baru di layar sempit.
+ */
 export function display(content, num, label) {
-  return `<div class="eq-display"><div class="eq-display-math">${math(content, { label })}</div>${num ? `<span class="eq-num">(${esc(num)})</span>` : ''}</div>`;
+  const parts = splitParts(Array.isArray(content) ? content.join('') : content);
+  const body = parts.length > 1 ? parts.map((p, i) => math(p, { label: i === 0 ? label : undefined })).join('') : math(parts[0], { label });
+  return `<div class="eq-display"><div class="eq-display-math${parts.length > 1 ? ' eq-parts' : ''}">${body}</div>${num ? `<span class="eq-num">(${esc(num)})</span>` : ''}</div>`;
 }
 
 /** Kotak catatan (info | warn | bad | ok). */
@@ -333,3 +343,12 @@ export const p = (html) => `<p>${html}</p>`;
 
 /** Simbol sebaris di dalam paragraf. */
 export const im = (...x) => imath(...x);
+
+/** Keterangan sel hitung untuk piezometer pilihan: "sel i = 15 (x = 77,5 m), terdekat dengan P3 (x = 75 m)". */
+export function cellCaption(c) {
+  const k = c.e.cell;
+  const pz = k.piezometerId ?? c.pz;
+  const px = k.piezometerX ?? NaN;
+  const tp = pz === c.snap.ind.tpId ? ' · titik penaatan' : '';
+  return `Sel hitung <strong>i = ${k.i}</strong> (x = ${fmt(k.x, 1)} m), sel terdekat dengan <strong>${esc(pz)}</strong> (x = ${fmt(px, 0)} m${tp}).`;
+}

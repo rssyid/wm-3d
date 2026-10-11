@@ -46,7 +46,7 @@ export function createTable(container, { meta }) {
       <textarea id="csv-text" readonly spellcheck="false" rows="4"></textarea>
       <button type="button" class="ui-btn ui-btn-sm tbl-fallback-close">${S.overlay.close}</button>
     </div>
-    <div class="tbl-scroll" tabindex="0" role="region" aria-label="${T.caption}">
+    <div class="tbl-scroll" tabindex="0" role="region" aria-label="${T.caption}" data-own-keys>
       <table class="data-table">
         <caption class="visually-hidden">${T.caption}</caption>
         <thead><tr>

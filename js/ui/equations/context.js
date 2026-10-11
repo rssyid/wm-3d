@@ -1,8 +1,7 @@
 // Konteks angka untuk satu "saat" simulasi: semua angka tab Persamaan diambil dari sini.
 // Sumber: explain() per piezometer, snapshot, dailySeries, peatCurves, ratingCurve, dan fungsi murni model.
 // Murni (tanpa DOM). Objek hasil tidak diubah lagi → bisa dipakai saat angka "dibekukan".
-// Beberapa besaran yang belum ada di explain() dibaca langsung dari keadaan model (hanya baca):
-// m.Er (EMA hujan sungai), m.forcing (penyedia hujan), m.depth30 (rata-rata 30 hari), m.lastForcing.
+// Rincian generator hujan dibaca dari penyedia forcing model (m.forcing, hanya baca).
 import {
   explain,
   dailySeries,
@@ -11,6 +10,7 @@ import {
   canalVolume,
   canalWetArea,
   calendarDay,
+  dateLabel,
   ETP_DIURNAL,
   MONTH_DAYS,
   SCENARIOS,
@@ -37,14 +37,17 @@ function canalCurves(geometry, n = 81) {
 function forcingInfo(model, snap) {
   const prov = model.forcing;
   const lf = model.lastForcing ?? {};
-  const kLast = model.k - 1; // jam terakhir yang sudah dihitung: [k−1, k)
+  // lastForcing.k = jam forcing yang ditampilkan (jam terakhir yang dihitung, atau jam berjalan setelah slider berubah)
+  const kLast = Number.isFinite(lf.k) ? lf.k : model.k - 1;
+  const hOf = (k) => ((k % 24) + 24) % 24;
   const day = Math.floor(kLast / 24);
-  const hour = ((kLast % 24) + 24) % 24;
+  const hour = hOf(kLast);
   const scale = model.rainScale ?? 1;
   const info = {
     kind: prov.kind,
     kLast,
     day,
+    dateLabel: dateLabel(day, prov.startMonth ?? 0),
     hour,
     started: model.k > 0,
     rainScale: scale,
@@ -105,16 +108,13 @@ export function buildContext(model, snap, { piezometer } = {}) {
   const D0 = e.geometry.zBank - e.geometry.zBase;
   const scenario = SCENARIOS[snap.scenarioId] ?? null;
   const river = {
-    zR0: model.forcing?.zR0 ?? NaN,
-    Er: model.Er ?? NaN,
-    manual: model.forcing?.kind === 'manual',
-    riverManual: model.forcing?.values?.riverM ?? NaN,
+    zR0: e.river.zR0 ?? NaN,
+    Er: e.river.Er,
+    manual: e.river.manual,
+    riverManual: e.river.manual ? e.river.hr : NaN,
   };
-  const meanDepth30Cm =
-    Array.isArray(model.depth30) && model.depth30.length
-      ? model.depth30.reduce((a, b) => a + b, 0) / model.depth30.length
-      : snap.ind.meanDepthCm;
-  const maxHead = Math.max(0.8, Math.ceil((Math.max(e.weir.H1, e.weir.H2, 0) * 1.25) * 10) / 10);
+  const meanDepth30Cm = snap.ind.subs.meanDepth30Cm ?? snap.ind.meanDepthCm;
+  const maxHead = Math.max(0.3, Math.ceil(Math.max(e.weir.H1, e.weir.H2, 0) * 1.6 * 10) / 10);
   return {
     t: snap.hourIndex,
     snap,

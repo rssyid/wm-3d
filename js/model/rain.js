@@ -70,7 +70,10 @@ function capAndRedistribute(arr, idx, cap, target, u2s) {
  * cfg: {seed, p01, p11, monthly[12] (mm/bulan), mu?}
  * Tepat 2 bilangan acak per hari. Setiap kelompok bulan diskalakan ke target (diprorata untuk bulan parsial).
  */
-export function generateDailyRain({ seed, p01, p11, monthly, mu = 15 }, firstDay, totalDays, startMonth) {
+/** Skala jumlah hujan hari basah (mm) sebelum penskalaan bulanan. */
+export const RAIN_MU_MM = 15;
+
+export function generateDailyRain({ seed, p01, p11, monthly, mu = RAIN_MU_MM }, firstDay, totalDays, startMonth) {
   const rng = mulberry32(seed);
   const amt = new Float64Array(totalDays);
   const u2s = new Float64Array(totalDays);

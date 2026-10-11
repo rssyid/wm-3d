@@ -229,7 +229,7 @@ export function createKpi(root, { meta, actions }) {
 
     // pembuangan
     el.qVal.set(fmtQ(st.q_m3s));
-    el.qLs.set(`${fmt(st.q_Ls ?? st.q_m3s * 1000, 1)} L/s`);
+    el.qLs.set(`${fmt(st.q_m3s * 1000, 1)} L/s`); // dari q_m3s terinterpolasi, konsisten dengan m³/s
     el.qMmd.set(`${fmt((st.q_m3s * 86400 * 1000) / area, 1)} mm/hari`);
     const dir = flowDirection(st);
     el.qDir.set(dir.label);

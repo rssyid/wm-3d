@@ -22,7 +22,7 @@ export function logTicks(min, max) {
   const out = [];
   const e0 = Math.floor(Math.log10(min));
   const e1 = Math.ceil(Math.log10(max));
-  const mults = e1 - e0 <= 2 ? [1, 2, 5] : [1];
+  const mults = e1 - e0 <= 3 ? [1, 2, 5] : [1];
   for (let e = e0; e <= e1; e++) for (const k of mults) {
     const v = k * 10 ** e;
     if (v >= min * (1 - 1e-9) && v <= max * (1 + 1e-9)) out.push(v);
@@ -139,9 +139,10 @@ export function drawPlot(canvas, spec) {
     ctx.stroke();
     const label = fmtTick(spec.x, xt, v);
     const w = ctx.measureText(label).width;
-    if (x - w / 2 > lastRight + 4) {
-      ctx.fillText(label, x, B + 5);
-      lastRight = x + w / 2;
+    const lx = Math.min(Math.max(x, w / 2 + 1), cssW - w / 2 - 1);
+    if (lx - w / 2 > lastRight + 4) {
+      ctx.fillText(label, lx, B + 5);
+      lastRight = lx + w / 2;
     }
   }
   // bingkai
@@ -274,6 +275,7 @@ export function drawPlot(canvas, spec) {
   }
 
   // titik
+  const labels = [];
   for (const p of spec.points || []) {
     if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
     const x = X(p.x);
@@ -301,24 +303,60 @@ export function drawPlot(canvas, spec) {
       ctx.lineWidth = 1;
       ctx.stroke();
     }
-    if (p.label) {
-      ctx.fillStyle = ink;
-      ctx.font = `600 ${fs}px ${fontBody}`;
-      const right = x < R - 60;
-      ctx.textAlign = right ? 'left' : 'right';
-      ctx.textBaseline = p.labelBelow ? 'top' : 'bottom';
-      halo(p.label, x + (right ? r + 3 : -(r + 3)), y + (p.labelBelow ? 2 : -2));
+    if (p.label) labels.push({ x, y, r, text: p.label, below: p.labelBelow, prio: p.ring ? 1 : 0 });
+  }
+
+  const placed = [];
+  const hit = (a) => placed.some((b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0);
+
+  // label titik: hindari tumpang-tindih (titik bercincin didahulukan; label yang tak muat dilewati)
+  ctx.font = `600 ${fs}px ${fontBody}`;
+  ctx.fillStyle = ink;
+  labels.sort((a, b) => b.prio - a.prio);
+  for (const lb of labels) {
+    const w = ctx.measureText(lb.text).width;
+    const h = fs + 2;
+    const off = lb.r + 3;
+    const cands = [
+      [lb.x + off, lb.y - off - h, 'left'],
+      [lb.x + off, lb.y + off, 'left'],
+      [lb.x - off - w, lb.y - off - h, 'right'],
+      [lb.x - off - w, lb.y + off, 'right'],
+    ];
+    if (lb.below) cands.unshift(cands.splice(1, 1)[0]);
+    for (const [x0, y0, align] of cands) {
+      const box = { x0, y0, x1: x0 + w, y1: y0 + h };
+      if (x0 < L - 2 || x0 + w > cssW - 2 || y0 < 0 || y0 + h > cssH) continue;
+      if (hit(box)) continue;
+      placed.push(box);
+      ctx.textAlign = align;
+      ctx.textBaseline = 'top';
+      halo(lb.text, align === 'left' ? x0 : x0 + w, y0 + 1);
+      break;
     }
   }
 
-  // teks bebas
+
+  // teks bebas (dilewati bila bertumpuk dengan label titik)
   ctx.font = `${fs}px ${fontBody}`;
   for (const t of spec.texts || []) {
     if (!Number.isFinite(t.x) || !Number.isFinite(t.y)) continue;
+    const align = t.align ?? 'left';
+    const base = t.base ?? 'bottom';
+    const tx = X(t.x) + (t.dx ?? 0);
+    const ty = Y(t.y) + (t.dy ?? 0);
+    const w = ctx.measureText(t.text).width;
+    const h = fs + 2;
+    const x0 = align === 'right' ? tx - w : align === 'center' ? tx - w / 2 : tx;
+    const y0 = base === 'bottom' ? ty - h : base === 'middle' ? ty - h / 2 : ty;
+    const box = { x0, y0, x1: x0 + w, y1: y0 + h };
+    if (hit(box)) continue;
+    placed.push(box);
     ctx.fillStyle = color(canvas, t.color, ink);
-    ctx.textAlign = t.align ?? 'left';
-    ctx.textBaseline = t.base ?? 'bottom';
-    halo(t.text, X(t.x) + (t.dx ?? 0), Y(t.y) + (t.dy ?? 0));
+    ctx.textAlign = align;
+    ctx.textBaseline = base;
+    halo(t.text, tx, ty);
   }
+
   return true;
 }

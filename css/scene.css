@@ -1,1 +1,224 @@
-/* scene.css — gaya khusus modul scene. Gunakan token dari base.css. */
+/* scene.css — label CSS2D di atas kanvas 3D. Memakai token base.css (tema terang & gelap).
+   Lapisan label (z-index 3) berada di bawah lapisan kontrol viewport milik UI (z-index 5). */
+
+.viewport > canvas.sc-canvas {
+  touch-action: none;
+}
+
+.sc-labels {
+  position: absolute !important;
+  inset: 0;
+  container: sclabels / inline-size;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+  font-family: var(--font-data);
+}
+
+.sc-labels[hidden] {
+  display: none !important;
+}
+
+.sc-anchor {
+  width: 0;
+  height: 0;
+  --off: 12px;
+  --dx: 0px;
+}
+
+.sc-anchor.is-occluded,
+.sc-anchor.is-collide {
+  visibility: hidden;
+}
+
+.sc-leader {
+  position: absolute;
+  left: -0.5px;
+  bottom: 0;
+  width: 1px;
+  height: var(--off);
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--surface) 60%, transparent);
+}
+
+.sc-leader::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  bottom: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 1px var(--surface);
+}
+
+.sc-label {
+  position: absolute;
+  left: 0;
+  bottom: var(--off);
+  transform: translateX(calc(-50% + var(--dx)));
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 2px 7px 2px 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--ink);
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-label:hover {
+  border-color: var(--accent);
+}
+
+.sc-label:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.sc-zone .sc-label {
+  bottom: auto;
+  top: 0;
+  transform: translate(calc(-50% + var(--dx)), -50%);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  box-shadow: none;
+}
+
+.sc-zone-unsat .sc-label {
+  background: color-mix(in srgb, #3b2a1d 78%, transparent);
+  color: #f6eee4;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.sc-zone-sat .sc-label {
+  background: color-mix(in srgb, #1f5ea8 82%, transparent);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.sc-wt .sc-label {
+  background: #0b4fd6;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.sc-sw {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  background: var(--st-bg, var(--line));
+  color: var(--st-fg, var(--ink));
+  font-size: 9px;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px var(--st-outline), 0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+.sc-tag {
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-body);
+}
+
+.sc-tag.is-ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+  box-shadow: inset 0 0 0 1px var(--ok);
+}
+
+.sc-tag.is-bad {
+  background: #ff1a1a;
+  color: #ffffff;
+}
+
+.sc-gate .sc-label {
+  border-color: var(--accent);
+  border-width: 1px 1px 1px 4px;
+}
+
+.sc-mode {
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--surface-2);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.sc-mode.is-auto {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: none;
+}
+
+.sc-warn {
+  padding: 0 4px;
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--warn-soft);
+  color: var(--warn);
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+
+.sc-gate-up .sc-label,
+.sc-gate-down .sc-label {
+  background: color-mix(in srgb, #1f5ea8 86%, transparent);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-data);
+}
+
+.sc-crest .sc-label {
+  border-left: 4px solid #8a5a32;
+}
+
+.sc-gauge .sc-label {
+  border-left: 4px solid var(--series-tmas);
+}
+
+.sc-river .sc-label {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+@container sclabels (max-width: 520px) {
+  .sc-label {
+    font-size: 10px;
+    padding: 1px 5px 1px 4px;
+    gap: 4px;
+  }
+
+  .sc-zone .sc-label {
+    font-size: 10px;
+  }
+
+  .sc-river {
+    display: none;
+  }
+}
+

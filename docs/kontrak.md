@@ -66,7 +66,7 @@ tetap diizinkan (model akan menimpanya pada evaluasi harian berikutnya).
 
 ## 5. Snapshot model (`snapshot(m)`; `view` = snapshot terinterpolasi `lerpSnapshot`)
 
-Contoh nyata (skenario `hujan`, hari 21, array dipotong):
+Contoh nyata (skenario `hujan`, hari 21, array dipotong; dibuat sebelum kalibrasi akhir — kini titik penaatan bawaan P4 dan stoplog 7):
 
 ```json
 {"tDays":20.21,"hourIndex":485,"day":20,"hourOfDay":5,"dateLabel":"21 Okt","scenarioId":"hujan","scenarioLabel":"Musim hujan","scenarioDays":120,"finished":false,
@@ -164,3 +164,5 @@ export function createScene(container, { params, options, onPick }) → {
 }
 ```
 Lempar Error bila WebGL2 tidak tersedia (main.js menampilkan `#webgl-fallback`).
+`onPick` menerima `{type, id, screenX, screenY (relatif viewport), clientX, clientY (koordinat halaman), source}`.
+`js/scene/index.js` juga mengekspor `sceneDebug` (pose kamera, proyeksi titik, info scene) khusus untuk tes.

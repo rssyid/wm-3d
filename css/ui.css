@@ -1328,7 +1328,7 @@ span.tip-v {
 
 .data-table th,
 .data-table td {
-  padding: 3px 8px;
+  padding: 3px 7px;
   text-align: right;
   white-space: nowrap;
   border-bottom: 1px solid var(--line);
@@ -1353,6 +1353,22 @@ span.tip-v {
   font-family: var(--font-data);
   font-weight: 500;
   color: var(--muted);
+}
+
+/* kolom "Hari" tetap terlihat saat tabel digulir ke samping */
+.data-table tr > :first-child {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+.data-table thead tr > :first-child {
+  z-index: 2;
+}
+
+.data-table tbody tr:hover > :first-child {
+  background: var(--surface-2);
 }
 
 .data-table tbody tr:hover {
@@ -1446,6 +1462,7 @@ span.tip-v {
   z-index: 5;
   pointer-events: none;
   font-size: var(--fs-xs);
+  container: vp / inline-size;
 }
 
 .vp-overlay > * {
@@ -1664,6 +1681,37 @@ span.tip-v {
   color: var(--muted);
 }
 
+/* Lapisan menyesuaikan lebar viewport itu sendiri (bukan lebar jendela). */
+@container vp (max-width: 700px) {
+  .vp-stamp {
+    display: grid;
+    justify-items: end;
+    text-align: right;
+    line-height: 1.35;
+  }
+
+  .vp-stamp-sep {
+    display: none;
+  }
+}
+
+@container vp (max-width: 560px) {
+  .vp-stamp {
+    top: 52px;
+    bottom: auto;
+  }
+}
+
+@container vp (max-width: 520px) {
+  .vp-legend-list {
+    grid-template-columns: auto auto 1fr;
+  }
+
+  .vp-legend-list .lg-range {
+    display: none;
+  }
+}
+
 /* ---------- Tab ponsel (base.css menampilkannya hanya di < 900px) ---------- */
 .mobile-tabs {
   gap: 2px;
@@ -1723,6 +1771,12 @@ span.tip-v {
 
   .sb-speed {
     flex: 0 1 auto;
+  }
+
+  .sb-speed select {
+    width: 134px;
+    padding-left: 8px;
+    padding-right: 24px;
   }
 
   .sb-clock {

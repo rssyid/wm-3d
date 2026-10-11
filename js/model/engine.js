@@ -40,6 +40,7 @@ function newScratch(N) {
     r: new Float64Array(N),
     rCoef: new Float64Array(N),
     qf: new Float64Array(N + 1),
+    lam: new Float64Array(N),
     Tb: 0,
     Tc: 0,
     hcs: 0,
@@ -184,6 +185,7 @@ function refreshForcing(m) {
   const rain_mm = fk.rain_mm * m.rainScale;
   const etp_mm = fk.etp_mm;
   m.lastForcing = {
+    k: m.k,
     rain_mm,
     etp_mm,
     etpDaily_mm: fk.etpDaily_mm ?? etp_mm * 24,
@@ -307,6 +309,7 @@ function computeFluxes(m, P, ETp) {
     const left = i === 0 ? (2 * Tb) / dx2 : (0.5 * (s.T[i] + s.T[i - 1])) / dx2;
     const right = i === N - 1 ? 0 : (0.5 * (s.T[i] + s.T[i + 1])) / dx2;
     const lam = (left + right + s.fdCoef[i] + s.rCoef[i]) / s.Sy[i];
+    s.lam[i] = lam;
     if (lam > lamMax) lamMax = lam;
   }
   s.lamMax = lamMax;
@@ -435,7 +438,7 @@ function advanceHour(m) {
   const P = (rain_mm / 1000) * HOURS_PER_DAY;
   const ETp = (etp_mm / 1000) * HOURS_PER_DAY;
   const Pmmd = rain_mm * HOURS_PER_DAY;
-  m.lastForcing = { rain_mm, etp_mm, etpDaily_mm: fk.etpDaily_mm ?? etp_mm * 24, P, ETp, Pmmd };
+  m.lastForcing = { k: m.k, rain_mm, etp_mm, etpDaily_mm: fk.etpDaily_mm ?? etp_mm * 24, P, ETp, Pmmd };
   m.hourOut = 0;
   let remaining = 1 / HOURS_PER_DAY;
   let n = 0;
@@ -836,7 +839,7 @@ export function snapshot(m) {
         longestStreak: pp.longest,
       },
       fire: { index: fire, cls: classifyFire(fire), drySpellDays: m.drySpell },
-      subs: { rate: subsidenceRate(mean30), cumCm: m.subsCumCm },
+      subs: { rate: subsidenceRate(mean30), cumCm: m.subsCumCm, meanDepth30Cm: mean30 },
     },
     balance: waterBalance(m),
     control: {
@@ -964,7 +967,8 @@ export function explain(m, opts = {}) {
   const fdActive = params.fieldDrains.enabled && (m.z[i] - hFd > 0 || (m.z[i] - hFd < 0 && m.hc > zFdC));
   return {
     tDays: Math.max(m.k, 0) / HOURS_PER_DAY,
-    forcing: { P_mmd: P * 1000, ETp_mmd: ETp * 1000, rain_mmh: m.lastForcing.rain_mm, rainScale: m.rainScale },
+    forcing: { k: m.lastForcing.k ?? null, P_mmd: P * 1000, ETp_mmd: ETp * 1000, rain_mmh: m.lastForcing.rain_mm, rainScale: m.rainScale },
+    river: { ...params.river, Er: m.Er, zR0: m.forcing.zR0 ?? null, manual: m.forcing.kind === 'manual', hr: m.hr },
     geometry: {
       N,
       dx: geo.dx,
@@ -1047,6 +1051,7 @@ export function explain(m, opts = {}) {
       dtC: s.dtC,
       dt: Math.min(1 / 24, Math.max(params.numerics.dtMin, Math.min(s.dtGw, s.dtC))),
       lamMax: s.lamMax,
+      lam: Float64Array.from(s.lam),
       substepsLastHour: m.substepsLastHour,
     },
     balance: waterBalance(m),

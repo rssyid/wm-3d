@@ -163,6 +163,7 @@ export function createChart(container, { meta }) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.round(r.width);
     const h = Math.round(r.height);
+    if (w < 2 || h < 2) return false; // tersembunyi: pertahankan ukuran terakhir (tanpa kedip kosong)
     if (w === size.w && h === size.h && dpr === size.dpr) return false;
     size = { w, h, dpr };
     for (const c of [canvas, overlay]) {
@@ -631,6 +632,24 @@ export function createChart(container, { meta }) {
     }
   });
 
+  // ---------- data baru ----------
+  const STATIC_MIN_MS = 90;
+  let lastStatic = -Infinity;
+  let pending = 0;
+  function flushData() {
+    pending = 0;
+    measure();
+    if (!visible()) {
+      dirty = true;
+      return;
+    }
+    lastStatic = performance.now();
+    drawStatic();
+    if (hoverIdx >= (series?.n ?? 0)) hoverIdx = -1;
+    drawOverlay(true);
+    if (hoverIdx >= 0) showTip(hoverIdx, sx(series.day[hoverIdx] + 0.5));
+  }
+
   // ---------- ukuran & tema ----------
   const ro = new ResizeObserver(() => {
     if (measure() || dirty) {
@@ -655,7 +674,6 @@ export function createChart(container, { meta }) {
     /** Data harian baru: gambar ulang lapisan statis. */
     setData(s) {
       full = s;
-      series = s;
       if (s?.tpId && s.tpId !== tpId) {
         const old = tpId;
         tpId = s.tpId;
@@ -665,15 +683,12 @@ export function createChart(container, { meta }) {
         }
         syncLegend();
       }
-      if (hoverIdx >= (s?.n ?? 0)) hoverIdx = -1;
-      measure();
-      if (!visible()) {
-        dirty = true;
-        return;
-      }
-      drawStatic();
-      drawOverlay(true);
-      if (hoverIdx >= 0) showTip(hoverIdx, sx(series.day[hoverIdx] + 0.5));
+      // Saat simulasi cepat, hari berganti tiap frame: lapisan statis digambar paling sering ±11×/detik.
+      const wait = STATIC_MIN_MS - (performance.now() - lastStatic);
+      if (wait <= 0) {
+        clearTimeout(pending);
+        flushData();
+      } else if (!pending) pending = setTimeout(flushData, wait);
     },
     /** Posisi playhead (hari kontinu); murah bila piksel tidak berubah. */
     setPlayhead(t) {

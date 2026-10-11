@@ -175,3 +175,59 @@ export function math(content, { display = 'block', label } = {}) {
 
 /** Pintasan rumus sebaris. */
 export const imath = (...content) => math(joinItems(content), { display: 'inline' });
+
+/** Anak-anak elemen tingkat atas dari satu elemen pembungkus (mis. isi <mrow>…</mrow>). */
+export function topChildren(markup) {
+  const str = String(markup).trim();
+  const open = /^<([a-zA-Z][a-zA-Z0-9-]*)(?:\s[^>]*)?>/.exec(str);
+  if (!open || !str.endsWith(`</${open[1]}>`)) return null;
+  const inner = str.slice(open[0].length, str.length - open[1].length - 3);
+  const out = [];
+  let depth = 0;
+  let start = 0;
+  TAG_RE.lastIndex = 0;
+  let m;
+  while ((m = TAG_RE.exec(inner))) {
+    const closing = m[1] === '/';
+    const selfClosing = m[3] === '/';
+    if (closing) {
+      depth--;
+      if (depth === 0) {
+        out.push(inner.slice(start, TAG_RE.lastIndex));
+        start = TAG_RE.lastIndex;
+      }
+    } else if (selfClosing) {
+      if (depth === 0) {
+        out.push(inner.slice(start, TAG_RE.lastIndex));
+        start = TAG_RE.lastIndex;
+      }
+    } else {
+      if (depth === 0) start = m.index;
+      depth++;
+    }
+  }
+  return depth === 0 ? out : null;
+}
+
+/**
+ * Pecah rumus "A, B, C" (mrow tingkat atas dengan pemisah <mo>,</mo><mspace>) menjadi bagian-bagian
+ * agar bisa dibungkus ke baris baru di layar sempit. Mengembalikan [isi] bila tidak ada pemisah.
+ */
+export function splitParts(markup) {
+  const kids = String(markup).startsWith('<mrow>') ? topChildren(markup) : null;
+  if (!kids) return [markup];
+  const parts = [];
+  let cur = [];
+  for (let i = 0; i < kids.length; i++) {
+    if (kids[i] === '<mo>,</mo>' && kids[i + 1]?.startsWith('<mspace')) {
+      parts.push(cur);
+      cur = [];
+      i++;
+      continue;
+    }
+    cur.push(kids[i]);
+  }
+  parts.push(cur);
+  if (parts.length < 2 || parts.some((p) => p.length === 0)) return [markup];
+  return parts.map((p) => (p.length === 1 ? p[0] : `<mrow>${p.join('')}</mrow>`));
+}
