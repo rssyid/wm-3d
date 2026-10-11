@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulasi Tata Air Gambut</title>
+  <meta name="description" content="Simulasi 3D tata air kebun kelapa sawit di lahan gambut: hubungan curah hujan, TMAT (piezometer), TMAS (saluran) dan pembuangan lewat pintu air.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%234572C4'/%3E%3Cpath d='M32 10c-8 12-14 20-14 28a14 14 0 0 0 28 0c0-8-6-16-14-28z' fill='%23fff'/%3E%3C/svg%3E">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+    }
+  }
+  </script>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js">
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.core.min.js">
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/ui.css">
+  <link rel="stylesheet" href="./css/scene.css">
+  <link rel="stylesheet" href="./css/equations.css">
+  <script type="module" src="./js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#app">Lewati ke konten</a>
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div class="brand-text">
+        <h1>Simulasi Tata Air Kebun Sawit Gambut</h1>
+        <p class="brand-sub">Curah hujan → TMAT → TMAS → Pembuangan</p>
+      </div>
+    </div>
+    <nav class="main-nav" aria-label="Navigasi utama">
+      <a href="#/sim" data-route="sim">Simulasi 3D</a>
+      <a href="#/persamaan/neraca" data-route="persamaan">Persamaan &amp; Perhitungan</a>
+      <a href="#/tentang" data-route="tentang">Tentang Model</a>
+    </nav>
+    <div class="sim-bar" id="sim-bar" aria-label="Kontrol simulasi"></div>
+  </header>
+
+  <main id="app">
+    <section id="view-sim" class="view view-sim" aria-label="Simulasi 3D">
+      <aside id="panel-left" class="panel panel-left" aria-label="Kontrol"></aside>
+      <div id="viewport" class="viewport">
+        <div id="webgl-fallback" class="webgl-fallback" hidden>
+          Peramban Anda tidak mendukung WebGL. Model, indikator, dan grafik tetap berjalan.
+        </div>
+      </div>
+      <aside id="panel-right" class="panel panel-right" aria-label="Indikator"></aside>
+      <section id="panel-bottom" class="panel panel-bottom" aria-label="Grafik"></section>
+      <nav id="mobile-tabs" class="mobile-tabs" aria-label="Panel"></nav>
+    </section>
+
+    <section id="view-persamaan" class="view view-persamaan" aria-label="Persamaan dan perhitungan" hidden></section>
+
+    <section id="view-tentang" class="view view-tentang" aria-label="Tentang model" hidden></section>
+  </main>
+
+  <noscript>Aplikasi ini memerlukan JavaScript.</noscript>
+</body>
+</html>

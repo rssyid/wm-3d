@@ -1,0 +1,477 @@
+/* Simulasi Tata Air Gambut — token dasar, tata letak, dan status.
+   Layout: bilah atas + tiga kolom (kontrol | viewport 3D di atas grafik | indikator); satu kolom di < 900px.
+   Warna aksen = "air gambut" (cokelat teh, warna khas air hitam di saluran gambut).
+   Warna kategori TMAT = ketentuan perusahaan (CMYK → RGB), sama di kedua tema. */
+
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@87,500;87,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+:root {
+  color-scheme: light;
+  /* neutral (sedikit condong hijau-zaitun, latar kebun) */
+  --bg: #eef0ea;
+  --surface: #fbfbf8;
+  --surface-2: #f2f4ee;
+  --ink: #1b221d;
+  --muted: #59655d;
+  --line: #d3d9cf;
+  --line-strong: #aab4a8;
+  /* aksen air gambut */
+  --accent: #9b5418;
+  --accent-ink: #ffffff;
+  --accent-soft: #f3e4d4;
+  --focus: #1f6fd1;
+  /* seri grafik (dipakai juga oleh UI & persamaan) */
+  --series-rain: #3d7fc9;
+  --series-tmat: #2f6fb8;
+  --series-tmas: #c2571d;
+  --series-q: #138a64;
+  --series-crest: #6b6a65;
+  --series-muted: #8c958e;
+  --chart-grid: #dfe4dc;
+  --chart-ink: #3e4a42;
+  /* semantik umum */
+  --ok: #1f7a3f;
+  --warn: #9a6a00;
+  --bad: #b3261e;
+  --ok-soft: #e1f0e5;
+  --warn-soft: #f6ecd2;
+  --bad-soft: #f7dedb;
+  /* kategori TMAT perusahaan (tetap di kedua tema) */
+  --st-banjir: #000000;
+  --st-banjir-ink: #ffffff;
+  --st-tergenang: #4572c4;
+  --st-tergenang-ink: #ffffff;
+  --st-agak-tergenang: #00ccff;
+  --st-agak-tergenang-ink: #000000;
+  --st-normal: #4e6128;
+  --st-normal-ink: #ffffff;
+  --st-agak-kering: #ffff66;
+  --st-agak-kering-ink: #000000;
+  --st-kering: #ff0000;
+  --st-kering-ink: #ffffff;
+  --st-outline: rgba(0, 0, 0, 0.18);
+  /* tipografi */
+  --font-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: 2rem;
+  /* ruang & bentuk */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --shadow: 0 1px 2px rgba(20, 30, 20, 0.08), 0 4px 16px rgba(20, 30, 20, 0.06);
+  --topbar-h: 56px;
+  --left-w: 292px;
+  --right-w: 320px;
+  --bottom-h: 248px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111411;
+    --surface: #181c18;
+    --surface-2: #1f241f;
+    --ink: #e8ece5;
+    --muted: #9ba79d;
+    --line: #2c342d;
+    --line-strong: #46514a;
+    --accent: #e09450;
+    --accent-ink: #1a1007;
+    --accent-soft: #3a2a1b;
+    --focus: #7db3ff;
+    --series-rain: #6aa6ea;
+    --series-tmat: #74a7ee;
+    --series-tmas: #f08a4b;
+    --series-q: #3cc597;
+    --series-crest: #a19f98;
+    --series-muted: #6f7a72;
+    --chart-grid: #2a312b;
+    --chart-ink: #c4ccc5;
+    --ok: #63c486;
+    --warn: #e2b546;
+    --bad: #ff7a70;
+    --ok-soft: #1c3324;
+    --warn-soft: #3a3016;
+    --bad-soft: #3d1d1a;
+    --st-outline: rgba(255, 255, 255, 0.55);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111411;
+  --surface: #181c18;
+  --surface-2: #1f241f;
+  --ink: #e8ece5;
+  --muted: #9ba79d;
+  --line: #2c342d;
+  --line-strong: #46514a;
+  --accent: #e09450;
+  --accent-ink: #1a1007;
+  --accent-soft: #3a2a1b;
+  --focus: #7db3ff;
+  --series-rain: #6aa6ea;
+  --series-tmat: #74a7ee;
+  --series-tmas: #f08a4b;
+  --series-q: #3cc597;
+  --series-crest: #a19f98;
+  --series-muted: #6f7a72;
+  --chart-grid: #2a312b;
+  --chart-ink: #c4ccc5;
+  --ok: #63c486;
+  --warn: #e2b546;
+  --bad: #ff7a70;
+  --ok-soft: #1c3324;
+  --warn-soft: #3a3016;
+  --bad-soft: #3d1d1a;
+  --st-outline: rgba(255, 255, 255, 0.55);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-stretch: 87%;
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0;
+  text-wrap: balance;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.num,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: var(--font-data);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--sp-4);
+  top: -48px;
+  z-index: 100;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+}
+
+.skip-link:focus {
+  top: var(--sp-2);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- Bilah atas ---------- */
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: var(--topbar-h);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(to bottom, transparent 0 46%, var(--st-tergenang) 46% 100%),
+    var(--accent);
+}
+
+.brand-text {
+  min-width: 0;
+}
+
+.brand h1 {
+  font-size: var(--fs-lg);
+  letter-spacing: 0.01em;
+}
+
+.brand-sub {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.main-nav {
+  display: flex;
+  gap: var(--sp-1);
+  flex-wrap: wrap;
+}
+
+.main-nav a {
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  padding: 6px var(--sp-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.main-nav a:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.main-nav a[aria-current="page"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.sim-bar {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* ---------- Tampilan ---------- */
+#app {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.view {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.view-sim {
+  display: grid;
+  grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
+  grid-template-rows: minmax(0, 1fr) var(--bottom-h);
+  grid-template-areas:
+    "left view right"
+    "left bottom right";
+}
+
+.panel {
+  background: var(--surface);
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.panel-left {
+  grid-area: left;
+  border-right: 1px solid var(--line);
+}
+
+.panel-right {
+  grid-area: right;
+  border-left: 1px solid var(--line);
+}
+
+.panel-bottom {
+  grid-area: bottom;
+  border-top: 1px solid var(--line);
+}
+
+.viewport {
+  grid-area: view;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: linear-gradient(#b7d3e6, #e6efe9);
+}
+
+.viewport > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.webgl-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-5);
+  text-align: center;
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.mobile-tabs {
+  display: none;
+}
+
+.view-persamaan,
+.view-tentang {
+  overflow: auto;
+  background: var(--bg);
+}
+
+/* ---------- Status kategori TMAT (perusahaan) ---------- */
+.st {
+  --st-bg: var(--surface-2);
+  --st-fg: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--st-bg);
+  color: var(--st-fg);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  box-shadow: inset 0 0 0 1px var(--st-outline);
+  white-space: nowrap;
+}
+
+.st-banjir { --st-bg: var(--st-banjir); --st-fg: var(--st-banjir-ink); }
+.st-tergenang { --st-bg: var(--st-tergenang); --st-fg: var(--st-tergenang-ink); }
+.st-agak-tergenang { --st-bg: var(--st-agak-tergenang); --st-fg: var(--st-agak-tergenang-ink); }
+.st-normal { --st-bg: var(--st-normal); --st-fg: var(--st-normal-ink); }
+.st-agak-kering { --st-bg: var(--st-agak-kering); --st-fg: var(--st-agak-kering-ink); }
+.st-kering { --st-bg: var(--st-kering); --st-fg: var(--st-kering-ink); }
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--st-bg, var(--line));
+  box-shadow: inset 0 0 0 1px var(--st-outline);
+  flex: 0 0 auto;
+}
+
+/* ---------- Layar sempit ---------- */
+@media (max-width: 899px) {
+  html,
+  body {
+    height: auto;
+  }
+
+  .topbar {
+    padding-inline: var(--sp-4);
+  }
+
+  .sim-bar {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .view-sim {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .viewport {
+    height: 48vh;
+    min-height: 260px;
+    flex: 0 0 auto;
+  }
+
+  .mobile-tabs {
+    display: flex;
+    order: 2;
+  }
+
+  .viewport { order: 1; }
+  .panel-left { order: 3; }
+  .panel-right { order: 4; }
+  .panel-bottom { order: 5; }
+
+  .panel {
+    border: 0;
+    overflow: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
