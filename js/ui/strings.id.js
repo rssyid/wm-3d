@@ -30,6 +30,7 @@ export const S = Object.freeze({
 
   left: {
     title: 'Kontrol',
+    targetLabels: { perusahaan: 'Normal perusahaan (46–60 cm)', pp: 'PP 57/2016 (≤ 40 cm di TP)' },
     scenario: 'Skenario',
     manualTitle: 'Mode Manual',
     manualDesc: 'Atur sendiri curah hujan, ETp, dan muka air sungai. Hujan disebar merata 24 jam; simulasi berjalan tanpa batas waktu.',
@@ -147,6 +148,7 @@ export const S = Object.freeze({
   },
 
   chart: {
+    tabsLabel: 'Tampilan data harian',
     tabChart: 'Grafik',
     tabTable: 'Tabel',
     rainTitle: 'Curah hujan (mm/hari)',
@@ -155,6 +157,7 @@ export const S = Object.freeze({
     surface: 'Permukaan gambut',
     ppLine: 'Batas PP 57/2016 (−40 cm)',
     normalBand: 'Normal perusahaan',
+    normalBandKey: 'Normal (−46…−60)',
     tmas: 'TMAS',
     crest: 'Mercu',
     legendHint: 'Klik untuk menonjolkan seri',
@@ -168,6 +171,10 @@ export const S = Object.freeze({
   },
 
   table: {
+    caption: 'Tabel harian: hujan, muka air piezometer dan saluran, pembuangan, stoplog, kategori dan kepatuhan di titik penaatan',
+    truncated: (shown, total) => `Menampilkan ${shown} dari ${total} hari terakhir; CSV memuat semuanya.`,
+    ppOk: 'patuh',
+    ppBad: 'tidak',
     day: 'Hari',
     date: 'Tanggal',
     rain: 'Hujan (mm)',
@@ -221,6 +228,13 @@ export const S = Object.freeze({
     on: 'aktif',
     off: 'nonaktif',
     river: 'Muka air sungai',
+    isTp: 'titik penaatan · batas ≤ 40 cm',
+    notTp: 'bukan titik penaatan · batas ≤ 40 cm',
+    gaugeSub: 'saluran koleksi · nol di tanggul',
+    readingNote: 'negatif = di bawah tanggul',
+    flapOn: 'pintu klep aktif',
+    sectionSub: 'transek 1D: saluran → tengah blok',
+    peatNote: 'di tengah blok',
   },
 
   narrative: {

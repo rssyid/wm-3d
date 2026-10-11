@@ -66,8 +66,31 @@ export function xDomain(series, window = 60) {
   const total = series?.scenarioDays;
   if (Number.isFinite(total) && total > 0) return [0, total];
   const n = series?.n ?? 0;
-  const end = Math.max(window, n);
+  const last = n && series.day ? series.day[n - 1] + 1 : n;
+  const end = Math.max(window, last);
   return [end - window, end];
+}
+
+/** Indeks [i0, i1) rekaman harian yang (sebagian) tampak di domain hari [x0, x1]. */
+export function visibleRange(days, x0, x1) {
+  const n = days?.length ?? 0;
+  let i0 = 0;
+  while (i0 < n && days[i0] + 1 <= x0) i0++;
+  let i1 = n;
+  while (i1 > i0 && days[i1 - 1] >= x1) i1--;
+  return [i0, i1];
+}
+
+/** Potongan deret harian [i0, i1) dengan bentuk sama seperti dailySeries(). */
+export function sliceSeries(series, i0, i1) {
+  if (!series) return series;
+  if (i0 === 0 && i1 === series.n) return series;
+  const out = { ...series, n: Math.max(0, i1 - i0) };
+  for (const [k, v] of Object.entries(series)) {
+    if (Array.isArray(v) && v.length === series.n) out[k] = v.slice(i0, i1);
+  }
+  out.depthCm = Object.fromEntries(Object.entries(series.depthCm ?? {}).map(([id, a]) => [id, a.slice(i0, i1)]));
+  return out;
 }
 
 /** Domain panel muka air (cm relatif permukaan): [min(−120, data), +20], dibulatkan ke 20 cm. */

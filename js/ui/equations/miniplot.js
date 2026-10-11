@@ -57,9 +57,9 @@ function axisMap(ax, a, b) {
 
 /**
  * Gambar grafik. Mengembalikan false bila kanvas belum punya ukuran (tersembunyi) → panggil ulang nanti.
- * spec: {x:{min,max,label,log,ticks,fmt,invert}, y:{…}, series:[{x,y,color,width,dash,fill}], bars:[{x,y,color,w}],
- *        hlines:[{y,color,dash,label}], vlines:[{x,color,dash,label}], hbands:[{y0,y1,color,alpha,label}],
- *        points:[{x,y,color,r,label,shape}], height}
+ * spec: {x:{min,max,label,log,ticks,fmt}, y:{…, invert}, series:[{x,y,color,width,dash,fill}], bars:[{x,y,color,w,base}],
+ *        areas:[{x,y0,y1,color,alpha}], hlines:[{y,color,dash,label}], vlines:[{x,color,dash,label}],
+ *        hbands:[{y0,y1,color,alpha}], points:[{x,y,color,r,label,shape,ring}], texts:[{x,y,text,color,align,base}]}
  */
 export function drawPlot(canvas, spec) {
   const cssW = canvas.clientWidth;
@@ -167,6 +167,25 @@ export function drawPlot(canvas, spec) {
   ctx.rect(L, T, R - L, B - T);
   ctx.clip();
 
+  // area di antara dua kurva (mis. zona jenuh)
+  for (const a of spec.areas || []) {
+    const n = a.x.length;
+    if (n < 2) continue;
+    ctx.beginPath();
+    for (let j = 0; j < n; j++) {
+      const px = X(a.x[j]);
+      const py = Y(Array.isArray(a.y1) ? a.y1[j] : a.y1);
+      if (j) ctx.lineTo(px, py);
+      else ctx.moveTo(px, py);
+    }
+    for (let j = n - 1; j >= 0; j--) ctx.lineTo(X(a.x[j]), Y(Array.isArray(a.y0) ? a.y0[j] : a.y0));
+    ctx.closePath();
+    ctx.globalAlpha = a.alpha ?? 0.2;
+    ctx.fillStyle = color(canvas, a.color);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
   // batang
   for (const b of spec.bars || []) {
     ctx.fillStyle = color(canvas, b.color);
@@ -272,8 +291,8 @@ export function drawPlot(canvas, spec) {
     }
     ctx.fillStyle = color(canvas, p.color, ink);
     ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = p.stroke ? color(canvas, p.stroke) : surface;
+    ctx.lineWidth = 1.25;
+    ctx.strokeStyle = color(canvas, p.stroke ?? '--chart-ink', ink);
     ctx.stroke();
     if (p.ring) {
       ctx.beginPath();
@@ -290,6 +309,16 @@ export function drawPlot(canvas, spec) {
       ctx.textBaseline = p.labelBelow ? 'top' : 'bottom';
       halo(p.label, x + (right ? r + 3 : -(r + 3)), y + (p.labelBelow ? 2 : -2));
     }
+  }
+
+  // teks bebas
+  ctx.font = `${fs}px ${fontBody}`;
+  for (const t of spec.texts || []) {
+    if (!Number.isFinite(t.x) || !Number.isFinite(t.y)) continue;
+    ctx.fillStyle = color(canvas, t.color, ink);
+    ctx.textAlign = t.align ?? 'left';
+    ctx.textBaseline = t.base ?? 'bottom';
+    halo(t.text, X(t.x) + (t.dx ?? 0), Y(t.y) + (t.dy ?? 0));
   }
   return true;
 }

@@ -103,7 +103,7 @@ export function createControls({ store, actions, meta, simBar, left }) {
   const ksMeta = metaFor(meta, 'peat.Ks', { min: 20, max: 500, step: 10 });
   const ve = meta.ve ?? { min: 1, max: 20, step: 1 };
   const targetOpts = Object.values(meta.controlTargets ?? {})
-    .map((t) => `<option value="${esc(t.id)}">${esc(t.label)}</option>`)
+    .map((t) => `<option value="${esc(t.id)}" title="${esc(t.label)}">${esc(L.targetLabels?.[t.id] ?? t.label)}</option>`)
     .join('');
   const tpOpts = (meta.piezometers ?? [])
     .map((p) => `<option value="${esc(p.id)}">${esc(p.name)}${p.note ? ` — ${esc(p.note)}` : ''}</option>`)

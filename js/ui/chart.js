@@ -10,6 +10,8 @@ import {
   linearScale,
   niceTicks,
   xDomain,
+  visibleRange,
+  sliceSeries,
   waterDomain,
   rainDomain,
   flowDomain,
@@ -123,13 +125,10 @@ export function createChart(container, { meta }) {
     legend.append(b);
     legendBtns[id] = b;
   }
-  const keyPP = document.createElement('span');
-  keyPP.className = 'lg-static lg-pp';
-  keyPP.innerHTML = '<span class="lg-key" aria-hidden="true"></span><span class="lg-lbl">PP ≤ 40 cm</span>';
   const keyNormal = document.createElement('span');
   keyNormal.className = 'lg-static lg-normal';
-  keyNormal.innerHTML = `<span class="lg-key" aria-hidden="true"></span><span class="lg-lbl">${C.normalBand}</span>`;
-  legend.append(keyPP, keyNormal);
+  keyNormal.innerHTML = `<span class="lg-key" aria-hidden="true"></span><span class="lg-lbl">${C.normalBandKey}</span>`;
+  legend.append(keyNormal);
 
   function syncLegend() {
     for (const id of seriesIds) {
@@ -141,7 +140,8 @@ export function createChart(container, { meta }) {
   syncLegend();
 
   // ---- state ----
-  let series = null;
+  let full = null; // deret harian lengkap dari model
+  let series = null; // potongan yang tampak di domain-x
   let colors = readColors();
   let size = { w: 0, h: 0, dpr: 1 };
   let L = null;
@@ -189,11 +189,15 @@ export function createChart(container, { meta }) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     const col = colors;
-    L = chartLayout(w, h, { left: 44, right: w < 480 ? 40 : 50 });
+    L = chartLayout(w, h, { left: 40, right: w < 480 ? 44 : 52, top: 14, gap: 15, axis: 16 });
     const px = L.plot.x;
     const pw = L.plot.w;
-    xDom = xDomain(series ?? { n: 0, scenarioDays: 60 });
+    xDom = xDomain(full ?? { n: 0, scenarioDays: 60 });
     sx = linearScale(xDom[0], xDom[1], px, px + pw);
+    if (full) {
+      const [i0, i1] = visibleRange(full.day, xDom[0], xDom[1]);
+      series = sliceSeries(full, i0, i1);
+    } else series = null;
     const n = series?.n ?? 0;
     const elev = elevArrays();
     const wDom = waterDomain(elev);
@@ -300,15 +304,6 @@ export function createChart(container, { meta }) {
       ctx.fillStyle = col.muted;
       ctx.fillText(fmt(v, 0), px - 6, y);
     }
-    // label pita Normal
-    const nb = classBands(meta.tmatClasses ?? [], wDom).find((b) => b.id === 'normal');
-    if (nb) {
-      const yMid = (syWater(nb.top) + syWater(nb.bottom)) / 2;
-      ctx.font = smallFont;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = col.chartInk;
-      ctx.fillText(`${C.normalBand} −45…−60`, px + 6, yMid);
-    }
     // permukaan gambut (0)
     ctx.strokeStyle = col.chartInk;
     ctx.lineWidth = 1;
@@ -370,7 +365,7 @@ export function createChart(container, { meta }) {
       line(xs, yT, tOn ? col.tmas : col.seriesMuted, tOn ? 2 : 1.1);
       ends.push({ id: 'TMAS', label: C.tmas, y: yT[n - 1], x: xs[n - 1], color: tOn ? col.tmas : col.seriesMuted, on: tOn });
       ctx.restore();
-      drawEndLabels(ends, wy, wy + wh, smallFont);
+      drawEndLabels(ends, wy, wy + wh);
     } else {
       ctx.font = `12px ${col.fontBody}`;
       ctx.fillStyle = col.muted;
@@ -397,6 +392,10 @@ export function createChart(container, { meta }) {
     if (n) {
       const xs = series.day.map((d) => sx(d + 0.5));
       const ys = series.q_mmd.map((v) => syFlow(v));
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(px, L.flow.y - 2, pw, L.flow.h + 4);
+      ctx.clip();
       ctx.fillStyle = hexA(col.q, col.dark ? 0.22 : 0.14);
       ctx.beginPath();
       ctx.moveTo(xs[0], yZero);
@@ -405,7 +404,7 @@ export function createChart(container, { meta }) {
       ctx.closePath();
       ctx.fill();
       line(xs, ys, col.q, 2);
-      if (n === 1) dot(xs[0], ys[0], col.q);
+      ctx.restore();
     }
   }
 
@@ -451,38 +450,37 @@ export function createChart(container, { meta }) {
     c.fill();
   }
 
-  /** Label ujung seri: ditaruh setelah titik terakhir, dirapikan vertikal dengan garis penghubung pendek. */
-  function drawEndLabels(ends, top, bottom, font) {
-    ctx.font = font;
-    const items = ends
-      .filter((e) => Number.isFinite(e.y))
-      .map((e) => ({ ...e, ly: Math.min(bottom - 4, Math.max(top + 4, e.y)) }))
-      .sort((a, b) => a.ly - b.ly);
+  /**
+   * Label ujung hanya untuk seri yang ditonjolkan. Bila label harus digeser jauh dari garisnya
+   * (seri berdekatan), label dilewati — identitas tetap terbaca dari legenda dan tooltip.
+   */
+  function drawEndLabels(ends, top, bottom) {
     const gap = 11;
+    const items = ends
+      .filter((e) => e.on && Number.isFinite(e.y))
+      .map((e) => ({ ...e, ly: Math.min(bottom - 5, Math.max(top + 5, e.y)) }))
+      .sort((a, b) => a.ly - b.ly);
     for (let i = 1; i < items.length; i++) if (items[i].ly - items[i - 1].ly < gap) items[i].ly = items[i - 1].ly + gap;
-    for (let i = items.length - 2; i >= 0; i--) {
-      if (items[i].ly > bottom - 4 - (items.length - 1 - i) * gap) items[i].ly = Math.min(items[i].ly, items[i + 1].ly - gap);
-    }
-    const xMax = L.plot.x + L.plot.w;
+    const over = items.length ? items[items.length - 1].ly - (bottom - 5) : 0;
+    if (over > 0) for (const it of items) it.ly -= over;
+    ctx.font = `600 10px ${colors.fontBody}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     for (const it of items) {
+      if (Math.abs(it.ly - it.y) > 14) continue;
       const tw = ctx.measureText(it.label).width;
-      let x = it.x + 8;
+      let x = it.x + 7;
       if (x + tw > size.w - 2) x = size.w - 2 - tw;
-      if (x < xMax - 4 && it.x > xMax - 30) x = xMax + 6;
       if (Math.abs(it.ly - it.y) > 2) {
-        ctx.strokeStyle = hexA(it.on ? it.color : colors.seriesMuted, 0.7);
+        ctx.strokeStyle = hexA(it.color, 0.7);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(it.x + 2, it.y);
         ctx.lineTo(x - 2, it.ly);
         ctx.stroke();
       }
-      ctx.fillStyle = it.on ? colors.ink : colors.muted;
-      ctx.font = it.on ? `600 ${font.replace(/^\d+(\.\d+)?px /, '10px ')}` : font;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
+      ctx.fillStyle = colors.ink;
       ctx.fillText(it.label, x, it.ly);
-      ctx.font = font;
     }
   }
 
@@ -656,6 +654,7 @@ export function createChart(container, { meta }) {
     legend,
     /** Data harian baru: gambar ulang lapisan statis. */
     setData(s) {
+      full = s;
       series = s;
       if (s?.tpId && s.tpId !== tpId) {
         const old = tpId;
