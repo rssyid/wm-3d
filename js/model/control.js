@@ -2,10 +2,20 @@
 
 export const CONTROL_TARGETS = Object.freeze({
   perusahaan: Object.freeze({ id: 'perusahaan', label: 'Perusahaan – Normal (46–60 cm)', band: Object.freeze([45, 60]) }),
-  pp: Object.freeze({ id: 'pp', label: 'PP 57/2016 (≤ 40 cm)', band: Object.freeze([30, 40]) }),
+  // target PP memakai kedalaman titik penaatan; pita di bawah 40 cm agar ada ruang sebelum melanggar
+  pp: Object.freeze({ id: 'pp', label: 'PP 57/2016 (≤ 40 cm di titik penaatan)', band: Object.freeze([15, 37]) }),
 });
 
 export const CONTROL_RULES = Object.freeze({ hysteresisCm: 3, minIntervalDays: 2, emergencyTmasCm: 20, emergencyDrop: 2, riverMarginM: 0.05 });
+
+/**
+ * Jumlah stoplog maksimum yang aman untuk mode otomatis: mercu tetap ≥ (ambang darurat TMAS + 10 cm) di bawah tanggul,
+ * supaya menambah papan tidak langsung memicu aturan darurat (osilasi tambah ↔ buang).
+ */
+export function safeMaxLogs(weir, zBank = 0) {
+  const crestMax = zBank - (CONTROL_RULES.emergencyTmasCm + 10) / 100;
+  return Math.max(0, Math.min(weir.nMax, Math.floor((crestMax - weir.zSill) / weir.plank + 1e-9)));
+}
 
 /**
  * Keputusan harian. Masukan: {nLogs, nMax, dMeanCm (rata-rata 24 jam semua piezometer), tmasCm, ponded,

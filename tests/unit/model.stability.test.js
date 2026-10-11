@@ -65,3 +65,16 @@ test('dua run identik menghasilkan keluaran persis sama', () => {
   const b = runScenario('ekstrem').series;
   assert.deepEqual(a, b);
 });
+
+test('kekeringan panjang dengan kanal kosong: tidak ada aliran menanjak, sub-langkah tetap sedikit', () => {
+  const m = createModel({ forcing: manualForcing({ rainMmd: 0, etpMmd: 5, riverM: -3 }), control: { nLogs: 0 } });
+  let maxSub = 0;
+  for (let h = 0; h < 24 * 80; h++) {
+    const s = advance(m, 1);
+    maxSub = Math.max(maxSub, s.substepsLastHour);
+    if (s.canal.levelM <= -1.6) assert.ok(s.profile.q[0] >= 0, `jam ${h}: kanal kering mengisi gambut`);
+    assert.ok(s.canal.volumeM3 >= 0);
+  }
+  assert.ok(maxSub <= 5, `sub-langkah maks ${maxSub}`);
+  assert.ok(waterBalance(m).relError < 1e-9);
+});

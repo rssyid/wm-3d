@@ -1,7 +1,7 @@
 // Tes kalibrasi skenario: yang disetel adalah parameter skenario, bukan batas tes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { runScenario, DEFAULT_PARAMS } from '../../js/model/index.js';
+import { runScenario, DEFAULT_PARAMS, safeMaxLogs } from '../../js/model/index.js';
 
 const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 const median = (a) => {
@@ -62,10 +62,12 @@ test('otomatis: normal mulai stoplog 5 → stoplog naik dan blok lebih basah dar
   assert.ok(auto.model.log.length > 0);
 });
 
-test('otomatis: kemarau mulai stoplog 5 → mencapai stoplog maksimum, tidak lebih kering daripada manual', () => {
+test('otomatis: kemarau mulai stoplog 5 → mencapai stoplog maksimum aman, tidak lebih kering daripada manual', () => {
   const man = runScenario('kemarau', { control: { nLogs: 5, mode: 'manual' } });
   const auto = runScenario('kemarau', { control: { nLogs: 5, mode: 'auto' } });
-  assert.equal(auto.series.nLogs.at(-1), DEFAULT_PARAMS.weir.nMax);
+  const safe = safeMaxLogs(DEFAULT_PARAMS.weir);
+  assert.equal(safe, 8);
+  assert.equal(auto.series.nLogs.at(-1), safe);
   assert.ok(mean(auto.series.depthCm.P3) <= mean(man.series.depthCm.P3) + 1e-9);
 });
 
@@ -78,9 +80,29 @@ test('otomatis: musim hujan mulai stoplog 9 → stoplog diturunkan, genangan ber
   assert.ok(mean(auto.series.depthCm.P3) > mean(man.series.depthCm.P3));
 });
 
-test('otomatis: tidak membuang stoplog saat sungai lebih tinggi dari kanal', () => {
-  const { model } = runScenario('ekstrem', { control: { mode: 'auto' } });
-  for (const e of model.log) assert.notEqual(e.type, 'tambah-saat-banjir');
-  // setiap aksi darurat hanya terjadi bila sungai lebih rendah dari kanal (dicek di aturan)
-  assert.ok(model.log.every((e) => typeof e.text === 'string'));
+test('otomatis: aksi darurat hanya bila sungai lebih rendah dari kanal', () => {
+  for (const target of ['perusahaan', 'pp']) {
+    const { model } = runScenario('ekstrem', { control: { mode: 'auto', target } });
+    const darurat = model.log.filter((e) => e.type === 'darurat');
+    assert.ok(darurat.length >= 1, 'badai ekstrem memicu aksi darurat');
+    for (const e of darurat) assert.ok(e.riverM < e.canalM - 0.05 + 1e-12, `hari ${e.day}: sungai ${e.riverM} vs kanal ${e.canalM}`);
+  }
+});
+
+test('otomatis: tidak berosilasi melawan aturan darurat (normal & musim hujan)', () => {
+  for (const id of ['normal', 'hujan']) {
+    for (const target of ['perusahaan', 'pp']) {
+      const { model, series } = runScenario(id, { control: { mode: 'auto', target } });
+      assert.equal(model.log.filter((e) => e.type === 'darurat').length, 0, `${id}/${target}`);
+      assert.ok(Math.max(...series.nLogs) <= safeMaxLogs(DEFAULT_PARAMS.weir));
+    }
+  }
+});
+
+test('otomatis target PP tidak lebih buruk daripada stoplog manual 8', () => {
+  for (const id of ['normal', 'hujan']) {
+    const man = runScenario(id, {}).model.pp.compliant;
+    const auto = runScenario(id, { control: { mode: 'auto', target: 'pp' } }).model.pp.compliant;
+    assert.ok(auto >= man, `${id}: ${auto} < ${man}`);
+  }
 });

@@ -16,7 +16,7 @@ import {
   subsidenceRate,
   THRESHOLDS,
 } from './indicators.js';
-import { autoGateDecision } from './control.js';
+import { autoGateDecision, safeMaxLogs } from './control.js';
 
 const SEC_PER_DAY = 86400;
 const HOURS_PER_DAY = 24;
@@ -271,6 +271,8 @@ function computeFluxes(m, P, ETp) {
   s.Tc = Tc;
   s.Tb = Tb;
   s.qf[0] = (Tb * (m.z[0] - hcs)) / (geo.dx / 2);
+  // saluran koleksi kering: dasarnya hanya bidang rembesan (keluar dari gambut), tidak bisa mengisi gambut
+  if (hc <= geo.zBedColl && s.qf[0] < 0) s.qf[0] = 0;
   for (let i = 1; i < N; i++) s.qf[i] = (0.5 * (s.T[i] + s.T[i - 1]) * (m.z[i] - m.z[i - 1])) / geo.dx;
   s.qf[N] = 0;
 
@@ -288,12 +290,13 @@ function computeFluxes(m, P, ETp) {
 
   s.Aw = canalWetArea(hc, geo.segments, geo.zBank);
   if (fixed == null) {
-    let denom = (2 * geo.Lb * 2 * Tb) / geo.dx;
+    // rembesan hanya bergantung pada hc bila muka air kanal di atas dasar saluran koleksi
+    let denom = hc > geo.zBedColl ? (2 * geo.Lb * 2 * Tb) / geo.dx : 0;
     for (let i = 0; i < N; i++) {
       if (hc > geo.zFd[i]) denom += geo.area[i] * s.fdCoef[i];
       if (hc > geo.zBank) denom += geo.area[i] * s.rCoef[i];
     }
-    s.dtC = denom > 0 ? (params.numerics.canalCoupling * s.Aw) / denom : Infinity;
+    s.dtC = denom > 0 && s.Aw > 0 ? (params.numerics.canalCoupling * s.Aw) / denom : Infinity;
   } else {
     s.dtC = Infinity;
   }
@@ -541,8 +544,8 @@ function finalizeDay(m) {
     const pond = pondingInfo(m);
     const dec = autoGateDecision({
       nLogs: m.control.nLogs,
-      nMax: m.params.weir.nMax,
-      dMeanCm: allMean,
+      nMax: safeMaxLogs(m.params.weir, m.geo.zBank),
+      dMeanCm: m.control.target === 'pp' ? tpMean : allMean,
       tmasCm: 100 * (m.geo.zBank - m.hc),
       ponded: pond.maxCm > 0,
       riverM: m.hr,
@@ -561,6 +564,8 @@ function finalizeDay(m) {
         from: m.control.nLogs,
         to: dec.nLogs,
         auto: true,
+        riverM: m.hr,
+        canalM: m.hc,
       };
       m.control.nLogs = dec.nLogs;
       m.lastActionType = dec.action.type;
@@ -887,7 +892,7 @@ export function explain(m, opts = {}) {
   let i = opts.cell;
   if (i == null) {
     const pz = params.piezometers.find((p) => p.id === (opts.piezometer ?? control.tpId)) ?? params.piezometers[0];
-    i = Math.min(N - 1, Math.max(0, Math.floor(pz.x / geo.dx)));
+    i = Math.min(N - 1, Math.max(0, Math.round(pz.x / geo.dx - 0.5)));
   }
   i = Math.min(N - 1, Math.max(0, i));
   const zeta = s.zeta[i];

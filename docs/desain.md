@@ -5,6 +5,8 @@
 > Perubahan dari user setelah sintesis: kategori TMAT perusahaan (Banjir/Tergenang/Agak Tergenang/Normal/
 > Agak Kering/Kering, warna CMYK), badge RSPO diganti badge kategori perusahaan, permukaan gambut berkubah
 > (zs(x)), terrain tidak datar + sawit detail, dan tab "Persamaan & Perhitungan".
+> Kalibrasi M1 mengubah default: stoplog 8 (mercu −0,4 m), Hd 0,2 m, sungai gR 0,04 / zRMax −0,15 m, ETp kemarau 4,5;
+> aturan otomatis: stoplog maks aman 8, target PP [15,37] pada titik penaatan (lihat docs/rencana.md "Catatan kalibrasi").
 
 ## Context
 

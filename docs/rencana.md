@@ -1,5 +1,15 @@
 # Rencana: Simulasi 3D Tata Air Kebun Sawit Gambut (`wm-3d`)
 
+## Catatan kalibrasi (M1)
+Nilai default disetel ulang saat kalibrasi agar perilaku skenario realistis:
+- **Stoplog default 8 papan (mercu −0,4 m):** dengan mercu −0,6 m, TMAT pada musim hujan sudah 55–80 cm (terlalu kering untuk kategori "Normal").
+- **Kubah `Hd` 0,20 m:** tetap terlihat jelas dengan eksagerasi ×10.
+- **Sungai `gR` 0,04, `zRMax` −0,15:** muka sungai dapat melampaui mercu saat badai ekstrem, sehingga pintu air terendam.
+- **ETp kemarau 4,5 mm/hari.**
+
+Akibatnya, TMAS default pada musim hujan sekitar 30–40 cm. Menurut kelas acuan BMP itu termasuk "Tinggi", dan ini disengaja agar TMAT berada di kisaran Normal/PP.
+Perbaikan setelah review: saluran koleksi yang kering hanya berfungsi sebagai bidang rembesan, batas sub-langkah tetap aman saat kanal kosong, dan aturan otomatis memakai stoplog maksimum aman 8 serta kedalaman titik penaatan untuk target PP.
+
 ## Context
 Repo `rssyid/wm-3d` masih kosong (belum ada commit), dan pekerjaan dilakukan di branch `claude/zealous-hawking-qtf0t8`.
 
@@ -63,7 +73,7 @@ Desain ini disusun lewat workflow 7 agen (draf per sudut pandang → kritik adve
 
 **Permukaan berkubah**
 - Elevasi permukaan gambut: `zs(x) = Hd·(1 − (1 − x/Lh)²)`.
-  - `Hd` adalah tinggi kubah, default 0,30 m. Ada slider "Kubah gambut" 0–1,0 m. Dengan `Hd = 0`, permukaan kembali datar.
+  - `Hd` adalah tinggi kubah, default 0,20 m (hasil kalibrasi). Ada slider "Kubah gambut" 0–1,0 m. Dengan `Hd = 0`, permukaan kembali datar.
 - Dasar gambut datar di −4,0 m, sehingga tebal lokal `D_i = zs_i + 4,0`.
 
 **Kedalaman dan muka air**
@@ -87,8 +97,8 @@ Desain ini disusun lewat workflow 7 agen (draf per sudut pandang → kritik adve
 | Luas | `Acp = 6240` m², `Atot = 306240` m² |
 | Parit lapangan | jarak `sFd = 59` m, dasar −0,9 m; bisa dimatikan dengan toggle |
 | Gambut | `Sy_s 0,30`, `Sy_d 0,08`, `λS 0,6`; `Ks 200`, `Kd 1,0` m/hari, `λK 0,25`. `Ks` dijadikan slider lanjutan 20–500. |
-| Pintu air | ambang `zSill −2,0`, lebar `Lw 1,5`, papan 0,20 m, 0–9 papan, default **7 papan (mercu −0,6 m)**, `Cw 1,7`, opsi pintu klep |
-| Sungai | `hr = min(zR0 + 0,03·EMA_hujan(τ 5 hari), −0,4)`. Pada mode Manual, nilainya dari slider. |
+| Pintu air | ambang `zSill −2,0`, lebar `Lw 1,5`, papan 0,20 m, 0–9 papan, default **8 papan (mercu −0,4 m)** (hasil kalibrasi), `Cw 1,7`, opsi pintu klep |
+| Sungai | `hr = min(zR0 + 0,04·EMA_hujan(τ 5 hari), −0,15)`. Pada mode Manual, nilainya dari slider. |
 | Piezometer | P1 x = 15, P2 x = 40, **P3 x = 75 (titik penaatan, "asumsi", bisa diubah)**, P4 x = 150 (tengah blok) |
 
 **Persamaan**
@@ -132,7 +142,7 @@ Pintu air stoplog:
 
 | id | Hari, awal | Seed | Ciri | ETp (mm/hari) | Target kalibrasi |
 |---|---|---|---|---|---|
-| `kemarau` | 120, Jun | 1101 | ±42 mm/bln | 4,8 | TMAT 90–120 cm di akhir ("Kering"), Q ≈ 0 |
+| `kemarau` | 120, Jun | 1101 | ±42 mm/bln | 4,5 | TMAT 90–120 cm di akhir ("Kering"), Q ≈ 0 |
 | `normal` | 365, Jan | 2202 | bulanan [210,160,230,250,190,120,110,140,180,250,290,260] | 3,6–4,5 | musim hujan sebagian besar "Tergenang"/"Normal"; Jun–Agu menuju "Agak Kering"/"Kering" |
 | `hujan` | 120, Okt | 3303 | ±300 mm/bln | 3,5 | 20–45 cm ("Tergenang"), Q sering |
 | `ekstrem` | 45, Des | 4404 | basis `hujan`; hari 14/15/16 = 110/170/70 mm | 3,5 | puncak Q di hari 14–19, "Banjir" (genangan), pintu terendam |
@@ -185,7 +195,8 @@ Indeks risiko kebakaran (heuristik): `100·(0,7·clamp((d̄−40)/60) + 0,3·cla
 Subsidensi (kalibrasi ilustratif, tanpa umpan balik ke hidrologi): `1,5 + 0,05·d̄₃₀` cm/tahun.
 
 **Mode otomatis pintu air** (`control.js`, dievaluasi harian)
-- Pita target: **"Perusahaan – Normal" [45,60]** (default) atau **"PP ≤ 40"** [30,40]. Histeresis 3 cm, jeda minimal 2 hari antar-aksi.
+- Pita target: **"Perusahaan – Normal" [45,60]** (default, rata-rata 4 piezometer) atau **"PP ≤ 40"** [15,37] (kedalaman harian di titik penaatan). Histeresis 3 cm, jeda minimal 2 hari antar-aksi.
+- Stoplog maksimum mode otomatis = 8 (mercu ≥ 30 cm di bawah tanggul), agar menambah papan tidak memicu aturan darurat (osilasi).
 - Darurat (TMAS < 20 atau tergenang): buang 2 papan, kecuali muka air sungai lebih tinggi.
 - Setiap aksi dicatat di log kejadian dan menggerakkan animasi papan.
 

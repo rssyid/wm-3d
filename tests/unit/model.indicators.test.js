@@ -84,8 +84,9 @@ test('aturan otomatis pintu air', () => {
   assert.equal(autoGateDecision({ ...base, dMeanCm: 70 }).nLogs, 8);
   assert.equal(autoGateDecision({ ...base, dMeanCm: 50 }).nLogs, 7);
   assert.equal(autoGateDecision({ ...base, dMeanCm: 70, daysSinceLast: 1 }).nLogs, 7);
-  assert.equal(autoGateDecision({ ...base, dMeanCm: 35, target: 'pp' }).nLogs, 7);
-  assert.equal(autoGateDecision({ ...base, dMeanCm: 50, target: 'pp' }).nLogs, 8);
+  assert.equal(autoGateDecision({ ...base, dMeanCm: 30, target: 'pp' }).nLogs, 7);
+  assert.equal(autoGateDecision({ ...base, dMeanCm: 41, target: 'pp' }).nLogs, 8);
+  assert.equal(autoGateDecision({ ...base, dMeanCm: 10, target: 'pp' }).nLogs, 6);
   // darurat: buang 2 papan bila sungai lebih rendah; tahan bila sungai tinggi
   assert.equal(autoGateDecision({ ...base, dMeanCm: 10, tmasCm: 10 }).nLogs, 5);
   const hold = autoGateDecision({ ...base, dMeanCm: 10, ponded: true, riverM: -0.3, canalM: -0.3 });
@@ -116,6 +117,16 @@ test('Hd = 0 → permukaan datar; mengubah Hd mempertahankan simpanan (kedalaman
   setParams(m, { 'geom.Hd': 0.4 });
   const d1 = snapshot(m).piezometers.map((p) => p.depthCm);
   for (let i = 0; i < d0.length; i++) assert.ok(Math.abs(d0[i] - d1[i]) < 1e-6);
+});
+
+test('explain() memilih sel terdekat piezometer (konsisten dengan KPI)', () => {
+  const m = createModel({ scenarioId: 'kemarau', control: { nLogs: 3 } });
+  advance(m, 24 * 60);
+  const s = snapshot(m);
+  for (const p of s.piezometers) {
+    const e = explain(m, { piezometer: p.id });
+    assert.ok(Math.abs(e.cell.x - p.x) <= 2.5 + 1e-9, `${p.id}: sel x=${e.cell.x}`);
+  }
 });
 
 test('explain() konsisten dengan engine', () => {
