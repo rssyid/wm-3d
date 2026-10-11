@@ -80,7 +80,8 @@ export function generateDailyRain({ seed, p01, p11, monthly, mu = 15 }, firstDay
     const u1 = rng();
     const u2 = rng();
     wet = u1 < (wet ? p11 : p01);
-    amt[j] = wet ? Math.min(-mu * Math.log(1 - u2), DAILY_CAP_MM) : 0;
+    // jumlah hari basah: Weibull (bentuk ≈ 0,67) agar ekor hujan lebat lebih realistis dibanding eksponensial
+    amt[j] = wet ? Math.min(mu * Math.pow(-Math.log(1 - u2), 1.5), DAILY_CAP_MM) : 0;
     u2s[j] = u2;
     months[j] = calendarDay(firstDay + j, startMonth).month;
   }

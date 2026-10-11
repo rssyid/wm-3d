@@ -1,14 +1,31 @@
 # Rencana: Simulasi 3D Tata Air Kebun Sawit Gambut (`wm-3d`)
 
-## Catatan kalibrasi (M1)
-Nilai default disetel ulang saat kalibrasi agar perilaku skenario realistis:
-- **Stoplog default 8 papan (mercu −0,4 m):** dengan mercu −0,6 m, TMAT pada musim hujan sudah 55–80 cm (terlalu kering untuk kategori "Normal").
-- **Kubah `Hd` 0,20 m:** tetap terlihat jelas dengan eksagerasi ×10.
-- **Sungai `gR` 0,04, `zRMax` −0,15:** muka sungai dapat melampaui mercu saat badai ekstrem, sehingga pintu air terendam.
-- **ETp kemarau 4,5 mm/hari.**
+## Catatan kalibrasi & review model
+Nilai bawaan akhir (setelah review fisika, numerik, dan fakta):
+- **K permukaan `Ks` 50 m/hari.** Ini nilai gambut kebun yang terdrainase; nilai hutan sekitar 200 (Kurnianto dkk. 2019).
+- **Stoplog bawaan 7 papan (mercu −0,6 m).** TMAS sekitar 58 cm, masuk kisaran BMP 50–70 cm.
+- **Kubah `Hd` 0,20 m.**
+- **Sungai:** `gR` 0,04, `zRMax` −0,15. Pada badai ekstrem pintu air bisa terendam.
+- **ETp kemarau** 4,5 mm/hari.
+- **Jumlah hujan per hari basah** memakai sebaran Weibull (bentuk ≈ 0,67), supaya hari hujan lebat lebih realistis.
 
-Akibatnya, TMAS default pada musim hujan sekitar 30–40 cm. Menurut kelas acuan BMP itu termasuk "Tinggi", dan ini disengaja agar TMAT berada di kisaran Normal/PP.
-Perbaikan setelah review: saluran koleksi yang kering hanya berfungsi sebagai bidang rembesan, batas sub-langkah tetap aman saat kanal kosong, dan aturan otomatis memakai stoplog maksimum aman 8 serta kedalaman titik penaatan untuk target PP.
+Titik penaatan bawaan = **P4 (tengah/sentroid petak)**, mengikuti ringkasan P.15/MENLHK/2017. Kepatuhan dinilai per rata-rata harian; ini **asumsi model** (`ind.pp.basis`).
+
+Mode otomatis:
+- Kedua target memakai kedalaman titik penaatan.
+- **Target perusahaan:** stoplog maksimum aman 8, darurat bila TMAS < 20 cm.
+- **Target PP:** pita [15, 37] cm, stoplog maksimum 9, darurat bila TMAS < 10 cm. Hasilnya, kepatuhan skenario normal naik dari 40 menjadi 217 hari/tahun.
+- Bila target tidak tercapai di stoplog maksimum, model mencatat aksi "jenuh" sekali.
+
+Kelas TMAS: hanya "Optimal 50–70" yang bersumber dari BMP RSPO; kelas lain ilustratif. "Siaga banjir" = 0–20 cm, sama dengan ambang darurat.
+
+Perbaikan numerik:
+- Saluran koleksi yang kering hanya berfungsi sebagai bidang rembesan.
+- Batas sub-langkah tetap aman saat kanal kosong.
+- Pembuangan dibatasi oleh air yang tersedia.
+- `relError` ikut menghitung clamp.
+- Forcing yang ditampilkan langsung diperbarui saat slider berubah.
+- Jumlah stoplog NaN ditolak, dan `geom.N` tidak bisa diubah saat simulasi berjalan.
 
 ## Context
 Repo `rssyid/wm-3d` masih kosong (belum ada commit), dan pekerjaan dilakukan di branch `claude/zealous-hawking-qtf0t8`.

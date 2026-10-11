@@ -65,8 +65,9 @@ test('otomatis: normal mulai stoplog 5 → stoplog naik dan blok lebih basah dar
 test('otomatis: kemarau mulai stoplog 5 → mencapai stoplog maksimum aman, tidak lebih kering daripada manual', () => {
   const man = runScenario('kemarau', { control: { nLogs: 5, mode: 'manual' } });
   const auto = runScenario('kemarau', { control: { nLogs: 5, mode: 'auto' } });
-  const safe = safeMaxLogs(DEFAULT_PARAMS.weir);
+  const safe = safeMaxLogs(DEFAULT_PARAMS.weir, 0, 'perusahaan');
   assert.equal(safe, 8);
+  assert.equal(safeMaxLogs(DEFAULT_PARAMS.weir, 0, 'pp'), 9);
   assert.equal(auto.series.nLogs.at(-1), safe);
   assert.ok(mean(auto.series.depthCm.P3) <= mean(man.series.depthCm.P3) + 1e-9);
 });
@@ -89,20 +90,26 @@ test('otomatis: aksi darurat hanya bila sungai lebih rendah dari kanal', () => {
   }
 });
 
-test('otomatis: tidak berosilasi melawan aturan darurat (normal & musim hujan)', () => {
+test('otomatis target perusahaan: tidak berosilasi melawan aturan darurat (normal & musim hujan)', () => {
   for (const id of ['normal', 'hujan']) {
-    for (const target of ['perusahaan', 'pp']) {
-      const { model, series } = runScenario(id, { control: { mode: 'auto', target } });
-      assert.equal(model.log.filter((e) => e.type === 'darurat').length, 0, `${id}/${target}`);
-      assert.ok(Math.max(...series.nLogs) <= safeMaxLogs(DEFAULT_PARAMS.weir));
-    }
+    const { model, series } = runScenario(id, { control: { mode: 'auto', target: 'perusahaan' } });
+    assert.equal(model.log.filter((e) => e.type === 'darurat').length, 0, id);
+    assert.ok(Math.max(...series.nLogs) <= safeMaxLogs(DEFAULT_PARAMS.weir, 0, 'perusahaan'));
   }
 });
 
-test('otomatis target PP tidak lebih buruk daripada stoplog manual 8', () => {
+test('otomatis target PP: kepatuhan jauh lebih baik daripada stoplog manual bawaan', () => {
   for (const id of ['normal', 'hujan']) {
     const man = runScenario(id, {}).model.pp.compliant;
-    const auto = runScenario(id, { control: { mode: 'auto', target: 'pp' } }).model.pp.compliant;
-    assert.ok(auto >= man, `${id}: ${auto} < ${man}`);
+    const { model, series } = runScenario(id, { control: { mode: 'auto', target: 'pp' } });
+    assert.ok(model.pp.compliant > man, `${id}: ${model.pp.compliant} ≤ ${man}`);
+    assert.ok(Math.max(...series.nLogs) <= safeMaxLogs(DEFAULT_PARAMS.weir, 0, 'pp'));
+    assert.ok(model.log.filter((e) => e.type === 'darurat').length <= 5, 'darurat hanya saat hujan lebat');
   }
+});
+
+test('otomatis: stoplog maksimum tercapai tetapi target belum → dicatat sekali "jenuh"', () => {
+  const { model } = runScenario('kemarau', { control: { mode: 'auto', target: 'perusahaan', nLogs: 8 } });
+  const jenuh = model.log.filter((e) => e.type === 'jenuh');
+  assert.equal(jenuh.length, 1);
 });

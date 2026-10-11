@@ -61,7 +61,8 @@ test('warna CMYK → hex sesuai ketentuan perusahaan', () => {
 test('kelas TMAS, subsidensi, dan indeks kebakaran', () => {
   assert.equal(classifyTmas(0).id, 'meluap');
   assert.equal(classifyTmas(-3).id, 'meluap');
-  assert.equal(classifyTmas(30).id, 'siaga-banjir');
+  assert.equal(classifyTmas(20).id, 'siaga-banjir');
+  assert.equal(classifyTmas(20.01).id, 'tinggi');
   assert.equal(classifyTmas(50).id, 'tinggi');
   assert.equal(classifyTmas(60).id, 'optimal');
   assert.equal(classifyTmas(100).id, 'rendah');

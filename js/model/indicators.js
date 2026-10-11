@@ -32,13 +32,16 @@ export const TMAT_CLASSES = freezeAll(
 /** Kewajiban PP 71/2014 jo PP 57/2016 Ps. 23(3)a: gambut rusak bila TMAT > 0,4 m di titik penaatan. */
 export const PP_LIMIT_CM = 40;
 
+/** Dasar penilaian kepatuhan di model. P.15/2017 tidak menetapkan rata-rata harian; ini asumsi model. */
+export const PP_BASIS = 'rata-rata harian di titik penaatan (asumsi model)';
+
 export const TMAS_CLASSES = freezeAll([
-  { id: 'meluap', label: 'Meluap', range: '≤ 0 cm', max: 0, color: '#1D3F8F', ink: '#FFFFFF', icon: '≋' },
-  { id: 'siaga-banjir', label: 'Siaga banjir', range: '0–30 cm', max: 30, color: '#3F7FD0', ink: '#FFFFFF', icon: '▼' },
-  { id: 'tinggi', label: 'Tinggi', range: '30–50 cm', max: 50, color: '#7FB2E6', ink: '#000000', icon: '▽' },
-  { id: 'optimal', label: 'Optimal', range: '50–70 cm', max: 70, color: '#2E8B57', ink: '#FFFFFF', icon: '●' },
-  { id: 'rendah', label: 'Rendah', range: '70–100 cm', max: 100, color: '#D8A300', ink: '#000000', icon: '△' },
-  { id: 'sangat-rendah', label: 'Sangat rendah', range: '> 100 cm', max: Infinity, color: '#C0392B', ink: '#FFFFFF', icon: '▲' },
+  { id: 'meluap', label: 'Meluap', range: '≤ 0 cm', max: 0, color: '#1D3F8F', ink: '#FFFFFF', icon: '≋', source: 'ilustratif' },
+  { id: 'siaga-banjir', label: 'Siaga banjir', range: '0–20 cm', max: 20, color: '#3F7FD0', ink: '#FFFFFF', icon: '▼', source: 'ilustratif (= ambang darurat pintu air otomatis)' },
+  { id: 'tinggi', label: 'Tinggi', range: '20–50 cm', max: 50, color: '#7FB2E6', ink: '#000000', icon: '▽', source: 'ilustratif' },
+  { id: 'optimal', label: 'Optimal', range: '50–70 cm', max: 70, color: '#2E8B57', ink: '#FFFFFF', icon: '●', source: 'BMP RSPO (saluran koleksi 50–70 cm)' },
+  { id: 'rendah', label: 'Rendah', range: '70–100 cm', max: 100, color: '#D8A300', ink: '#000000', icon: '△', source: 'ilustratif' },
+  { id: 'sangat-rendah', label: 'Sangat rendah', range: '> 100 cm', max: Infinity, color: '#C0392B', ink: '#FFFFFF', icon: '▲', source: 'ilustratif' },
 ]);
 
 export const FIRE_CLASSES = freezeAll([

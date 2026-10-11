@@ -58,7 +58,7 @@ const store = createStore({
     quality: narrow ? 'rendah' : 'tinggi',
     camera: 'ikhtisar',
   },
-  eq: { piezometer: 'P3', frozen: false },
+  eq: { piezometer: DEFAULT_CONTROL.tpId, frozen: false },
   status: { finished: false, slow: false },
 });
 

@@ -9,6 +9,7 @@ test('stabil pada Ks = 1000, dx = 2 m, hujan 300 mm/hari selama 5 hari', () => {
   const m = createModel({
     forcing: manualForcing({ rainMmd: 300, etpMmd: 0, riverM: -2 }),
     params: { 'peat.Ks': 1000, 'geom.N': 75 },
+    control: { nLogs: 8 }, // kanal di atas muka air tanah awal: hujan hanya menaikkan muka air
   });
   let prev = snapshot(m).profile.depthCm;
   for (let d = 0; d < 5; d++) {

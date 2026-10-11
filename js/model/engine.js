@@ -17,6 +17,7 @@ import {
   THRESHOLDS,
 } from './indicators.js';
 import { autoGateDecision, safeMaxLogs } from './control.js';
+import { PP_BASIS } from './indicators.js';
 
 const SEC_PER_DAY = 86400;
 const HOURS_PER_DAY = 24;
@@ -101,8 +102,8 @@ export function createModel(opts = {}) {
       : scenarioForcing(scenarioId, { spinUpDays, seed: opts.seed }));
   const geo = deriveGeometry(params);
   const init = { ...forcing.init, ...(opts.init ?? {}) };
-  const control = { ...DEFAULT_CONTROL, nLogs: init.nLogs ?? DEFAULT_CONTROL.nLogs, ...(opts.control ?? {}) };
-  control.nLogs = clampLogs(control.nLogs, params);
+  const control = { ...DEFAULT_CONTROL, ...(opts.control ?? {}) };
+  control.nLogs = clampLogs(opts.control?.nLogs ?? init.nLogs ?? DEFAULT_CONTROL.nLogs, params, DEFAULT_CONTROL.nLogs);
   const nP = params.piezometers.length;
 
   const m = {
@@ -110,7 +111,7 @@ export function createModel(opts = {}) {
     geo,
     forcing,
     control,
-    rainScale: opts.rainScale ?? 1,
+    rainScale: sanitizeScale(opts.rainScale ?? 1),
     forcingResolution: opts.forcingResolution ?? 'hourly',
     k: forcing.kind === 'manual' ? 0 : -(forcing.spinUpDays ?? 0) * HOURS_PER_DAY,
     W: new Float64Array(geo.N),
@@ -163,11 +164,34 @@ export function createModel(opts = {}) {
     m.spinningUp = false;
   }
   resetStats(m);
+  if (forcing.kind === 'manual') refreshForcing(m);
   return m;
 }
 
-function clampLogs(n, params) {
-  return Math.min(Math.max(Math.round(n), 0), params.weir.nMax);
+function clampLogs(n, params, fallback = 0) {
+  const v = Math.round(Number(n));
+  return Number.isFinite(v) ? Math.min(Math.max(v, 0), params.weir.nMax) : fallback;
+}
+
+function sanitizeScale(s) {
+  const v = Number(s);
+  return Number.isFinite(v) ? Math.max(0, v) : 1;
+}
+
+/** Forcing yang ditampilkan (jam berjalan) — dipakai snapshot/explain; tidak memengaruhi integrasi. */
+function refreshForcing(m) {
+  const fk = forcingAt(m, m.k);
+  const rain_mm = fk.rain_mm * m.rainScale;
+  const etp_mm = fk.etp_mm;
+  m.lastForcing = {
+    rain_mm,
+    etp_mm,
+    etpDaily_mm: fk.etpDaily_mm ?? etp_mm * 24,
+    P: (rain_mm / 1000) * HOURS_PER_DAY,
+    ETp: (etp_mm / 1000) * HOURS_PER_DAY,
+    Pmmd: rain_mm * HOURS_PER_DAY,
+  };
+  if (m.forcing.kind === 'manual' && m.forcing.values && Number.isFinite(m.forcing.values.riverM)) m.hr = m.forcing.values.riverM;
 }
 
 function resetStats(m) {
@@ -373,8 +397,14 @@ function substep(m, dtMax, P, ETp, Pmmd) {
     const crest = crestLevel(m.control.nLogs, params.weir);
     const h = solveCanalLevel(Vtarget, dt, m.hr, crest, params.weir, m.control.flapGate, geo.segments, geo.zBank, params.numerics.bisectIter);
     const Q = weirQ(h, m.hr, crest, params.weir, m.control.flapGate);
-    const wv = SEC_PER_DAY * dt * Q;
+    let wv = SEC_PER_DAY * dt * Q;
     let Vn = Vtarget - wv;
+    if (Vn < 0 && wv > 0) {
+      // pembuangan dibatasi oleh air yang tersedia (mis. mercu di bawah dasar saluran)
+      const cut = Math.min(-Vn, wv);
+      wv -= cut;
+      Vn += cut;
+    }
     if (Vn < 0) {
       c.clamp += -Vn;
       Vn = 0;
@@ -499,7 +529,8 @@ function finalizeDay(m) {
   const tpMean = meanDepth[tp];
   const allMean = meanDepth.reduce((a, b) => a + b, 0) / nP;
 
-  // kepatuhan PP 57/2016 (rata-rata harian di titik penaatan)
+  // kepatuhan PP 71/2014 jo 57/2016 — ASUMSI MODEL: dinilai per rata-rata harian di titik penaatan
+  // (P.15/2017 mengatur pengukuran manual/logger, tidak menetapkan rata-rata harian)
   const pp = m.pp;
   pp.days++;
   pp.lastDayMeanCm = tpMean;
@@ -544,8 +575,8 @@ function finalizeDay(m) {
     const pond = pondingInfo(m);
     const dec = autoGateDecision({
       nLogs: m.control.nLogs,
-      nMax: safeMaxLogs(m.params.weir, m.geo.zBank),
-      dMeanCm: m.control.target === 'pp' ? tpMean : allMean,
+      nMax: safeMaxLogs(m.params.weir, m.geo.zBank, m.control.target),
+      dMeanCm: tpMean,
       tmasCm: 100 * (m.geo.zBank - m.hc),
       ponded: pond.maxCm > 0,
       riverM: m.hr,
@@ -555,7 +586,7 @@ function finalizeDay(m) {
     });
     if (dec.action) {
       const changed = dec.nLogs !== m.control.nLogs;
-      const repeatHold = dec.action.type === 'tahan' && m.lastActionType === 'tahan';
+      const repeatHold = (dec.action.type === 'tahan' || dec.action.type === 'jenuh') && m.lastActionType === dec.action.type;
       const entry = {
         day: dayIndex + 1,
         dateLabel: dateLabel(dayIndex + 1, m.forcing.startMonth),
@@ -571,7 +602,7 @@ function finalizeDay(m) {
       m.lastActionType = dec.action.type;
       if (changed) m.lastActionDay = dayIndex + 1;
       if (!repeatHold) pushLog(m, entry);
-    } else if (m.lastActionType === 'tahan') {
+    } else if (m.lastActionType === 'tahan' || m.lastActionType === 'jenuh') {
       m.lastActionType = null;
     }
   }
@@ -602,7 +633,7 @@ export function advance(m, hours = 1) {
 export function setControl(m, patch = {}) {
   const c = m.control;
   if (patch.nLogs !== undefined) {
-    const n = clampLogs(patch.nLogs, m.params);
+    const n = clampLogs(patch.nLogs, m.params, c.nLogs);
     if (n !== c.nLogs) {
       const day = Math.floor(Math.max(m.k, 0) / HOURS_PER_DAY);
       pushLog(m, {
@@ -624,27 +655,35 @@ export function setControl(m, patch = {}) {
 /** Mengubah parameter (mis. kubah Hd, Ks, parit lapangan). Simpanan W per sel dipertahankan (neraca tetap tertutup). */
 export function setParams(m, patch = {}) {
   const S1 = totalStorage(m);
-  m.params = mergeParams(m.params, patch);
+  const next = mergeParams(m.params, patch);
+  if (next.geom.N !== m.W.length) throw new Error('geom.N tidak bisa diubah saat berjalan; buat model baru');
+  m.params = next;
   m.geo = deriveGeometry(m.params);
   for (let i = 0; i < m.geo.N; i++) m.z[i] = m.geo.zs[i] - depthFromStorage(m.W[i], m.params.peat);
   if (m.params.fixedCanalLevel != null) m.hc = m.params.fixedCanalLevel;
   else m.hc = canalLevelFromVolume(m.Vc, m.geo.segments, m.geo.zBank);
-  m.S0 += totalStorage(m) - S1;
+  const dS = totalStorage(m) - S1;
+  m.S0 += dS;
+  for (let j = 0; j < m.roll.cap; j++) m.roll.S[j] += dS;
   return snapshot(m);
 }
 
 export function setForcing(m, provider) {
   m.forcing = provider;
+  refreshForcing(m);
   return snapshot(m);
 }
 
 export function setRainScale(m, s) {
-  m.rainScale = s;
+  m.rainScale = sanitizeScale(s);
+  refreshForcing(m);
 }
 
 /** Nilai slider mode Manual: {rainMmd, etpMmd, riverM}. */
 export function setManualInputs(m, values = {}) {
-  if (m.forcing.kind === 'manual') Object.assign(m.forcing.values, values);
+  if (m.forcing.kind !== 'manual') return;
+  Object.assign(m.forcing.values, values);
+  refreshForcing(m);
 }
 
 export function waterBalance(m) {
@@ -653,7 +692,8 @@ export function waterBalance(m) {
   const outflow = c.et + c.evapCanal + c.outWeir + c.boundary;
   const dS = totalStorage(m) - m.S0;
   const residual = inflow - outflow - dS;
-  return { in: inflow, out: outflow, dS, residual, relError: Math.abs(residual) / Math.max(inflow, outflow, 1e-9), cum: { ...c } };
+  // air "dibuat" oleh clamp ikut dihitung sebagai galat agar tidak tersembunyi
+  return { in: inflow, out: outflow, dS, residual, relError: (Math.abs(residual) + c.clamp) / Math.max(inflow, outflow, 1e-9), cum: { ...c } };
 }
 
 function todayBalance(m) {
@@ -786,6 +826,7 @@ export function snapshot(m) {
       pp: {
         now: ppCompliant(depths[tp]),
         limitCm: THRESHOLDS.ppLimitCm,
+        basis: PP_BASIS,
         lastDayMeanCm: pp.lastDayMeanCm,
         lastDayCompliant: Number.isFinite(pp.lastDayMeanCm) ? ppCompliant(pp.lastDayMeanCm) : null,
         daysCounted: pp.days,
@@ -890,8 +931,10 @@ export function explain(m, opts = {}) {
   computeFluxes(m, P, ETp);
   const s = m.sc;
   let i = opts.cell;
+  let pzSel = null;
   if (i == null) {
     const pz = params.piezometers.find((p) => p.id === (opts.piezometer ?? control.tpId)) ?? params.piezometers[0];
+    pzSel = pz;
     i = Math.min(N - 1, Math.max(0, Math.round(pz.x / geo.dx - 0.5)));
   }
   i = Math.min(N - 1, Math.max(0, i));
@@ -978,6 +1021,10 @@ export function explain(m, opts = {}) {
       r: s.r[i],
       net,
       dzdt: net / s.Sy[i],
+      piezometerId: pzSel?.id ?? null,
+      piezometerX: pzSel?.x ?? null,
+      // kedalaman di posisi piezometer (interpolasi antar-sel, sama dengan KPI)
+      piezometerDepthCm: pzSel ? 100 * depthAtX(m, pzSel.x) : null,
     },
     canal: {
       h: m.hc,

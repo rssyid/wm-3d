@@ -16,20 +16,20 @@ export const SCENARIOS = Object.freeze({
     rain: { p01: 0.12, p11: 0.35, monthly: [150, 120, 150, 140, 90, 42, 42, 42, 42, 90, 150, 150] },
     etp: 4.5,
     zR0: -2.4,
-    init: { tmatCm: 45, nLogs: 8 },
+    init: { tmatCm: 45, nLogs: 7 },
   }),
   normal: Object.freeze({
     id: 'normal',
     label: 'Tahun normal',
     short: 'Normal',
-    description: 'Satu tahun dengan pola hujan khas Riau/Kalimantan (±2.390 mm/tahun), kemarau Jun–Agu.',
+    description: 'Satu tahun dengan pola hujan khas Riau (±2.390 mm/tahun), kemarau Jun–Agu.',
     days: 365,
     startMonth: 0,
     seed: 2202,
     rain: { p01: 0.45, p11: 0.7, monthly: NORMAL_MONTHLY },
     etp: NORMAL_ETP,
     zR0: -2.2,
-    init: { tmatCm: 45, nLogs: 8 },
+    init: { tmatCm: 45, nLogs: 7 },
   }),
   hujan: Object.freeze({
     id: 'hujan',
@@ -42,7 +42,7 @@ export const SCENARIOS = Object.freeze({
     rain: { p01: 0.5, p11: 0.75, monthly: [300, 220, 230, 250, 190, 120, 110, 140, 250, 300, 300, 300] },
     etp: 3.5,
     zR0: -2.0,
-    init: { tmatCm: 50, nLogs: 8 },
+    init: { tmatCm: 50, nLogs: 7 },
   }),
   ekstrem: Object.freeze({
     id: 'ekstrem',
@@ -60,7 +60,7 @@ export const SCENARIOS = Object.freeze({
     ],
     etp: 3.5,
     zR0: -2.0,
-    init: { tmatCm: 45, nLogs: 8 },
+    init: { tmatCm: 45, nLogs: 7 },
   }),
 });
 
@@ -140,7 +140,7 @@ export function manualForcing(values = {}, { startMonth = 0 } = {}) {
     days: Infinity,
     spinUpDays: 0,
     zR0: v.riverM,
-    init: { tmatCm: 45, nLogs: 8 },
+    init: { tmatCm: 45, nLogs: 7 },
     meanRainMmd: v.rainMmd,
     values: v,
     hour(k) {

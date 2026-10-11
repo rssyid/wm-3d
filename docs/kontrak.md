@@ -48,10 +48,10 @@ Jangan menyunting berkas milik agen lain. `tests/e2e/smoke.e2e.js` dan `tests/e2
   speedHps: 24,                      // jam simulasi per detik (lihat SPEEDS di core/config.js)
   rainScale: 1,                      // pengali hujan 0,5–1,5 (skenario)
   manual: { rainMmd: 20, etpMmd: 4, riverM: -2.0 },   // mode Manual: 0–200 mm/hari, 2–6 mm/hari, −3,0…−0,15 m
-  gate: { mode: 'manual' | 'auto', nLogs: 8, flapGate: false, target: 'perusahaan' | 'pp' },
-  land: { Hd: 0.2, fieldDrains: true, Ks: 200, tpId: 'P3' },
+  gate: { mode: 'manual' | 'auto', nLogs: 7, flapGate: false, target: 'perusahaan' | 'pp' },
+  land: { Hd: 0.2, fieldDrains: true, Ks: 50, tpId: 'P4' },     // P4 = tengah petak = titik penaatan bawaan
   view: { ve: 10, labels: true, cutaway: true, particles: true, quality: 'tinggi' | 'rendah', camera: 'ikhtisar' },
-  eq: { piezometer: 'P3', frozen: false },             // milik tab Persamaan
+  eq: { piezometer: 'P4', frozen: false },             // milik tab Persamaan
   status: { finished: false, slow: false },            // diisi main.js
 }
 ```
@@ -85,6 +85,10 @@ Contoh nyata (skenario `hujan`, hari 21, array dipotong):
  "control":{"mode":"manual","target":"perusahaan","tpId":"P3","lastAction":null,"log":[{"day":12,"dateLabel":"13 Okt","type":"kurangi|tambah|darurat|tahan|manual","text":"…","from":8,"to":7,"auto":true}]},
  "substepsLastHour":1}
 ```
+
+Catatan nilai bawaan terbaru: stoplog 7 (mercu −0,6 m), Ks 50, titik penaatan **P4** (`isTP`), `ind.pp.basis` = "rata-rata harian di titik penaatan (asumsi model)";
+log kontrol bisa berisi `type: 'jenuh'` (target tidak tercapai di stoplog maksimum) dan membawa `riverM`/`canalM`.
+`explain().cell` juga memuat `piezometerId`, `piezometerX`, `piezometerDepthCm` (interpolasi, sama dengan KPI).
 
 Konvensi: z = 0 di tanggul saluran koleksi, positif ke atas. `depthCm` positif ke bawah (negatif = banjir).
 `tmasCm` = cm di bawah tanggul (≤ 0 = meluap). Kategori TMAT: `cls.id ∈ {banjir, tergenang, agak-tergenang,

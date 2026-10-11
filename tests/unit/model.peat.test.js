@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DEFAULT_PARAMS, specificYield, storageFromDepth, depthFromStorage, transmissivity, conductivity, etBeta } from '../../js/model/index.js';
 
 const peat = DEFAULT_PARAMS.peat;
+const forest = { ...DEFAULT_PARAMS.peat, Ks: 200 }; // nilai acuan T(0) = 53,75 dihitung dengan Ks 200
 const D = 4;
 
 test('W ↔ ζ bolak-balik sampai 1e-10 untuk ζ ∈ [−0,5; 3,95]', () => {
@@ -25,7 +26,8 @@ test('dW/dz = Sy (turunan numerik)', () => {
 });
 
 test('T(0) = 53,75 m²/hari, T(D) = 0, T menurun monoton, K(0) = Ks', () => {
-  assert.ok(Math.abs(transmissivity(0, D, peat) - 53.75) < 0.01);
+  assert.ok(Math.abs(transmissivity(0, D, forest) - 53.75) < 0.01);
+  assert.ok(Math.abs(transmissivity(0, D, peat) - (4 + 49 * 0.25 * (1 - Math.exp(-16)))) < 1e-9);
   assert.equal(transmissivity(D, D, peat), 0);
   assert.equal(transmissivity(-0.2, D, peat), transmissivity(0, D, peat));
   let prev = Infinity;
@@ -36,8 +38,8 @@ test('T(0) = 53,75 m²/hari, T(D) = 0, T menurun monoton, K(0) = Ks', () => {
   }
   assert.equal(conductivity(0, peat), peat.Ks);
   // cek nilai acuan
-  assert.ok(Math.abs(transmissivity(0.3, D, peat) - 18.7) < 0.1);
-  assert.ok(Math.abs(transmissivity(0.6, D, peat) - 7.9) < 0.1);
+  assert.ok(Math.abs(transmissivity(0.3, D, forest) - 18.7) < 0.1);
+  assert.ok(Math.abs(transmissivity(0.6, D, forest) - 7.9) < 0.1);
 });
 
 test('faktor ET β: 1 sampai 0,4 m, 0,3 di 1,2 m, nol di dasar gambut', () => {

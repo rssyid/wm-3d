@@ -21,7 +21,8 @@ export const DEFAULT_PARAMS = deepFreeze({
     main: { count: 1, length: 300, zBed: -2.2, bottom: 1.5, slope: 0.75 },
   },
   fieldDrains: { enabled: true, spacing: 59, depth: 0.9 },
-  peat: { SyS: 0.3, SyD: 0.08, lamS: 0.6, Ks: 200, Kd: 1.0, lamK: 0.25 },
+  // Ks 50 m/hari: gambut kebun terdrainase (lebih rendah dari nilai hutan ±200; Kurnianto dkk. 2019)
+  peat: { SyS: 0.3, SyD: 0.08, lamS: 0.6, Ks: 50, Kd: 1.0, lamK: 0.25 },
   et: { fullTo: 0.4, reduceTo: 1.2, betaMin: 0.3, baseGuard: 0.2, eowFactor: 1.1 },
   runoff: { ks: 2 },
   weir: { zSill: -2.0, width: 1.5, plank: 0.2, nMax: 9, Cw: 1.7 },
@@ -29,19 +30,20 @@ export const DEFAULT_PARAMS = deepFreeze({
   piezometers: [
     { id: 'P1', x: 15, name: 'P1', note: 'dekat saluran' },
     { id: 'P2', x: 40, name: 'P2', note: '' },
-    { id: 'P3', x: 75, name: 'P3', note: 'titik penaatan (asumsi)' },
-    { id: 'P4', x: 150, name: 'P4', note: 'tengah blok' },
+    { id: 'P3', x: 75, name: 'P3', note: '' },
+    // titik penaatan di tengah (sentroid) petak, sesuai ringkasan P.15/MENLHK/2017
+    { id: 'P4', x: 150, name: 'P4', note: 'tengah blok · titik penaatan' },
   ],
   numerics: { C: 0.5, canalCoupling: 0.4, dtMin: 1e-5, spinUpDays: 30, bisectIter: 60 },
   fixedCanalLevel: null, // hook tes: bila angka, muka air kanal dipatok (kanal = batas tak hingga)
 });
 
 export const DEFAULT_CONTROL = deepFreeze({
-  nLogs: 8,
+  nLogs: 7,
   flapGate: false,
   mode: 'manual', // 'manual' | 'auto'
   target: 'perusahaan', // 'perusahaan' | 'pp'
-  tpId: 'P3',
+  tpId: 'P4',
 });
 
 /** Metadata parameter yang bisa diubah lewat UI (path bertitik → label, satuan, rentang). */
