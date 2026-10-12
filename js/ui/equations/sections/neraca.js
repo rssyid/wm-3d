@@ -1,5 +1,6 @@
 // Bagian 1 — Ringkasan & neraca air blok + saluran.
 // Sumber angka: explain().balance (= waterBalance), snapshot.today, dailySeries, geometri explain().
+import { fmtDepthClass, fmtElevClassCm } from '../../format.js';
 import { classifyTmat } from '../../../model/index.js';
 import { mi, mn, mo, row, sub, sup, eq, paren, frac, mtext, sum, space, up } from '../mathml.js';
 import {
@@ -138,7 +139,7 @@ export function live(c) {
       fmt(s.rain_mm[j], 1),
       fmt(s.etp_mm[j], 1),
       fmt(s.out_mm[j], 1),
-      `${fmtSigned(-d, 1)}`,
+      fmtElevClassCm(d).replace(' cm', ''),
       `<span class="st st-${esc(cls.id)}"><span aria-hidden="true">${esc(cls.icon)}</span> ${esc(cls.label)}</span>`,
       fmtSigned(-s.tmasCm[j], 0),
       ppBadge(s.ppCompliant[j], true),

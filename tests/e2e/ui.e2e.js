@@ -111,7 +111,8 @@ test('▶ memajukan waktu, ⏸ membekukan; Spasi men-toggle', T, async () => {
   const t0 = await snap(page, () => wmApp.actions.getView().tDays);
   await page.click('#btn-play');
   assert.equal(await page.getAttribute('#btn-play', 'aria-pressed'), 'true');
-  await page.waitForTimeout(1500);
+  // SwiftShader bisa membutuhkan beberapa detik per frame saat banyak berkas diuji: tunggu waktu maju, jangan menebak durasi
+  await page.waitForFunction((t) => wmApp.actions.getView().tDays > t, t0, { timeout: 30000 });
   const t1 = await snap(page, () => wmApp.actions.getView().tDays);
   assert.ok(t1 > t0, `waktu maju (${t0} → ${t1})`);
   await page.click('#btn-play');

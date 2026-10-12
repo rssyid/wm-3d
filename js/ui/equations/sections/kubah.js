@@ -1,5 +1,6 @@
 // Bagian 4 — Permukaan gambut berkubah, kedalaman lokal ζ, tebal gambut lokal D.
 // Sumber angka: explain().cell/cells/geometry, snapshot.piezometers/profile.
+import { fmtDepthClass, fmtElevClassCm } from '../../format.js';
 import { surfaceAt } from '../../../model/index.js';
 import { mi, mn, mo, row, sub, sup, eq, paren, fn, space } from '../mathml.js';
 import {
@@ -88,14 +89,14 @@ export function live(c) {
   L.push(line(S.Di, row(nm(k.zs, 3), mo('−'), nmp(g.zBase, 1)), `${fmt(k.D, 3)} m`));
   L.push(line(S.zfdi, row(nm(k.zs, 3), mo('−'), nm(fd.depth, 1)), `${fmt(k.fdBed, 3)} m`));
   if (k.piezometerDepthCm != null) {
-    L.push(line(sub(S.d, mi('P')), null, `${fmt(k.piezometerDepthCm, 1)} cm`, { note: `interpolasi (4.5) di x = ${fmt(k.piezometerX, 0)} m; nilai yang tampil di KPI` }));
+    L.push(line(sub(S.d, mi('P')), null, `${fmtDepthClass(k.piezometerDepthCm)} cm`, { note: `interpolasi (4.5) di x = ${fmt(k.piezometerX, 0)} m; nilai yang tampil di KPI` }));
   }
   const ps = c.snap.piezometers;
   if (ps.length > 1) {
     const a = ps[0];
     const b = ps[ps.length - 1];
     L.push(
-      `<p class="eq-calc-foot">Efek kubah: permukaan di ${esc(b.id)} ${fmt(100 * (b.surfaceM - a.surfaceM), 0)} cm lebih tinggi daripada di ${esc(a.id)}. Elevasi muka air ${esc(b.id)} ${fmt(b.levelM, 3)} m vs ${esc(a.id)} ${fmt(a.levelM, 3)} m; kategori ditentukan oleh kedalaman dari permukaan lokal: ${esc(b.id)} ${fmtSigned(-b.depthCm, 0)} cm vs ${esc(a.id)} ${fmtSigned(-a.depthCm, 0)} cm.</p>`,
+      `<p class="eq-calc-foot">Efek kubah: permukaan di ${esc(b.id)} ${fmt(100 * (b.surfaceM - a.surfaceM), 0)} cm lebih tinggi daripada di ${esc(a.id)}. Elevasi muka air ${esc(b.id)} ${fmt(b.levelM, 3)} m vs ${esc(a.id)} ${fmt(a.levelM, 3)} m; kategori ditentukan oleh kedalaman dari permukaan lokal: ${esc(b.id)} ${fmtElevClassCm(b.depthCm)} vs ${esc(a.id)} ${fmtElevClassCm(a.depthCm)}.</p>`,
     );
   }
   out['kb-calc'] = L.join('');
@@ -105,8 +106,8 @@ export function live(c) {
     fmt(q.x, 0),
     fmt(q.surfaceM, 3),
     fmt(q.levelM, 3),
-    fmt(q.depthCm, 1),
-    `${fmtSigned(-q.depthCm, 0)} cm`,
+    fmtDepthClass(q.depthCm),
+    fmtElevClassCm(q.depthCm),
     stBadge(q.cls),
     ppBadge(q.ppCompliant, true),
   ]);

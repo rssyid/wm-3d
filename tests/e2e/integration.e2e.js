@@ -129,3 +129,59 @@ test('angka TMAT di dekat batas kategori memakai desimal', async () => {
   assert.deepEqual(out, ['−45,1 cm', '−40,2 cm', '−52 cm', '−60,02 cm']);
   await context.close();
 });
+
+test('hari terakhir skenario masuk ke tabel/grafik; ▶ setelah +1 hari tidak memutar ulang tampilan', async () => {
+  const { context, page, logs } = await open();
+  await page.evaluate(() => {
+    wmApp.setScenario('ekstrem');
+    wmApp.stepDays(44);
+    wmApp.stepHours(24);
+  });
+  const n = await page.evaluate(() => ({ n: wmApp.actions.dailySeries().n }));
+  assert.equal(n.n, 45);
+  await page.click('.bottom-tabs [data-tab="tabel"], [data-tab="tabel"]').catch(() => {});
+  const rows = await page.evaluate(() => document.querySelectorAll('.tbl-view tbody tr').length);
+  assert.equal(rows, 45, 'tabel memuat hari ke-45');
+  // ▶ setelah lompatan: tampilan tidak mundur
+  await page.evaluate(() => {
+    wmApp.reset?.();
+    wmApp.actions.reset();
+    wmApp.setScenario('normal');
+    wmApp.stepHours(1440);
+    wmApp.actions.stepDay();
+  });
+  const t0 = await page.evaluate(() => wmApp.actions.getView().tDays);
+  await page.evaluate(() => wmApp.actions.play());
+  const samples = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const out = [];
+        let c = 0;
+        const tick = () => {
+          out.push(wmApp.actions.getView().tDays);
+          if (++c < 12) requestAnimationFrame(tick);
+          else resolve(out);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
+  for (const t of samples) assert.ok(t >= t0 - 1e-9, `tampilan mundur: ${t} < ${t0}`);
+  assert.deepEqual(logs.errors, []);
+  await context.close();
+});
+
+test('tren "muka air naik/turun per 24 jam" mengikuti titik penaatan baru', async () => {
+  const { context, page, logs } = await open();
+  const r = await page.evaluate(async () => {
+    wmApp.stepHours(24 * 50 + 7);
+    wmApp.store.patch('land', { tpId: 'P1' });
+    const h = (await import('./js/model/index.js')).hourlySeries(wmApp.model, 25);
+    const snap = wmApp.getSnapshot();
+    const p1Now = snap.piezometers.find((p) => p.id === 'P1').depthCm;
+    return { tpNow: h.tpDepthCm.at(-1), p1Now, tp24: h.tpDepthCm[0], pz24: h.pz0[0] };
+  });
+  assert.ok(Math.abs(r.tpNow - r.p1Now) < 1.5, `riwayat jam terakhir mengikuti P1 (${r.tpNow} vs ${r.p1Now})`);
+  assert.equal(r.tp24, r.pz24, 'riwayat 24 jam lalu juga dari P1');
+  assert.deepEqual(logs.errors, []);
+  await context.close();
+});

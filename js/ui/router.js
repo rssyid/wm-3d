@@ -90,6 +90,17 @@ export function createRouter(store, doc = document) {
       if (r) store.set({ route: r });
     });
   }
+  // tautan "Lewati ke konten": pindahkan fokus tanpa mengubah hash/riwayat
+  const skip = doc.querySelector('.skip-link');
+  if (skip) {
+    skip.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = doc.getElementById('app');
+      if (!target) return;
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      target.focus();
+    });
+  }
   if (!fromUrl()) apply(store.get().route);
   return {
     go(view, section = null) {

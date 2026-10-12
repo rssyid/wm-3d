@@ -196,9 +196,12 @@ export function reliefZeroSpots(params) {
 
 /** Preset kamera pada VE ×10 (y target diskalakan dengan VE). fitW = lebar adegan (m) yang harus muat. */
 export const CAMERA_PRESETS = Object.freeze({
-  ikhtisar: Object.freeze({ pos: [-175, 125, 240], target: [-5, -30, -45], fov: 45, fitW: 330 }),
-  penampang: Object.freeze({ pos: [-84, -55.3, 200], target: [-84, -36, 0], fov: 35, fitW: 206, cutaway: true, scaleOffY: true }),
-  'pintu-air': Object.freeze({ pos: [193, 16, -168], target: [198, -12, -225], fov: 48, fitW: 52, scaleOff: true }),
+  // target dekat permukaan (bukan di bawah tanah) agar zoom roda tidak menembus tanah
+  ikhtisar: Object.freeze({ pos: [-175, 150, 240], target: [-5, -5, -45], fov: 45, fitW: 330 }),
+  // kamera tepat di bawah lantai potongan (lantai tidak terlihat); target dinaikkan agar penampang lebih ke tengah bingkai
+  penampang: Object.freeze({ pos: [-84, -55.3, 200], target: [-84, -26, 0], fov: 35, fitW: 206, cutaway: true, scaleOffY: true }),
+  // dilihat serong dari hulu-samping (±45°) agar muka papan stoplog dan luapan di atas mercu terlihat
+  'pintu-air': Object.freeze({ pos: [172, 16, -201], target: [198, -12, -225], fov: 48, fitW: 52, scaleOff: true }),
   atas: Object.freeze({ pos: [20, 520, -19], target: [20, 0, -20], fov: 45, fitW: 420, cut: Object.freeze({ pos: [40, 380, -104], target: [40, 0, -105] }) }),
 });
 

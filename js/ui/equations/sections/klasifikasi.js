@@ -2,6 +2,7 @@
 // indeks risiko kebakaran (heuristik), subsidensi (ilustratif).
 // Sumber angka: TMAT_CLASSES, TMAS_CLASSES, FIRE_CLASSES, THRESHOLDS, PP_LIMIT_CM, PP_BASIS, classifyTmat,
 // ppCompliant, cmykToHex (model), snapshot.ind/piezometers/profile.
+import { fmtDepthClass, fmtElevClassCm } from '../../format.js';
 import {
   TMAT_CLASSES,
   TMAS_CLASSES,
@@ -73,7 +74,7 @@ export function render(c) {
     esc(k.source ?? ''),
   ]);
   const fireRows = FIRE_CLASSES.map((k, i) => [
-    `<span class="eq-chip" style="--chip:${esc(k.color)};--chip-ink:#FFFFFF">${esc(k.label)}</span>`,
+    `<span class="eq-chip" style="--chip:${esc(k.color)};--chip-ink:${esc(k.ink ?? '#FFFFFF')}">${esc(k.label)}</span>`,
     i === 0 ? `&lt; ${k.max}` : Number.isFinite(k.max) ? `${FIRE_CLASSES[i - 1].max}–${k.max}` : `≥ ${FIRE_CLASSES[i - 1].max}`,
   ]);
   return `
@@ -134,11 +135,11 @@ export function live(c) {
   const L = [];
   L.push(
     textLine(
-      `Titik penaatan <strong>${esc(ind.tpId)}</strong>: kedalaman sesaat ${fmt(ind.tpDepthCm, 1)} cm (elevasi ${fmtSigned(-ind.tpDepthCm, 0)} cm) → ${stBadge(tpCls)} ${ppBadge(pp.now)}`,
+      `Titik penaatan <strong>${esc(ind.tpId)}</strong>: kedalaman sesaat ${fmtDepthClass(ind.tpDepthCm)} cm (elevasi ${fmtElevClassCm(ind.tpDepthCm)}) → ${stBadge(tpCls)} ${ppBadge(pp.now)}`,
     ),
   );
   L.push(
-    line(sub(dbar, mtext('TP')), null, Number.isFinite(pp.lastDayMeanCm) ? `${fmt(pp.lastDayMeanCm, 1)} cm` : '—', {
+    line(sub(dbar, mtext('TP')), null, Number.isFinite(pp.lastDayMeanCm) ? `${fmtDepthClass(pp.lastDayMeanCm)} cm` : '—', {
       note: Number.isFinite(pp.lastDayMeanCm) ? `rata-rata hari terakhir yang lengkap → ${pp.lastDayCompliant ? 'patuh' : 'tidak patuh'} (batas ≤ ${pp.limitCm} cm)` : 'belum ada hari lengkap',
     }),
   );
@@ -148,7 +149,7 @@ export function live(c) {
   } else if ((tpCls.id === 'tergenang' || tpCls.id === 'banjir') && pp.now) {
     L.push(`<p class="eq-calc-foot">Sekarang: patuh PP, tetapi menurut kategori perusahaan "${esc(tpCls.label)}" (terlalu basah bagi tanaman).</p>`);
   }
-  L.push(textLine(`Rata-rata empat piezometer: ${fmt(ind.meanDepthCm, 1)} cm → ${stBadge(ind.meanCls)}`));
+  L.push(textLine(`Rata-rata empat piezometer: ${fmtDepthClass(ind.meanDepthCm)} cm → ${stBadge(ind.meanCls)}`));
   out['kl-now'] = L.join('');
 
   const fire = ind.fire;

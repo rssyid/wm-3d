@@ -1,5 +1,7 @@
 // Interpolasi dua snapshot model untuk animasi halus antar-langkah jam.
-// Field kontinu diinterpolasi; field diskret (kelas, jumlah stoplog, log) diambil dari snapshot b.
+// Field kontinu diinterpolasi; kategori TMAT & status PP dihitung ulang dari kedalaman terinterpolasi
+// (agar angka dan kategori selalu cocok); field diskret lain (stoplog, log) diambil dari snapshot b.
+import { classifyTmat, ppCompliant } from '../model/indicators.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -14,8 +16,25 @@ export function lerpSnapshot(a, b, alpha) {
   if (!a || !b) return b ?? a;
   const t = Math.min(Math.max(alpha, 0), 1);
   if (t >= 1 || a === b) return b;
+  const piezometers = b.piezometers.map((p, i) => {
+    const pa = a.piezometers[i];
+    if (!pa) return p;
+    const depthCm = lerp(pa.depthCm, p.depthCm, t);
+    return { ...p, levelM: lerp(pa.levelM, p.levelM, t), depthCm, cls: classifyTmat(depthCm), ppCompliant: ppCompliant(depthCm) };
+  });
+  const tp = piezometers.find((p) => p.isTP) ?? piezometers[0];
+  const meanDepthCm = piezometers.reduce((acc, p) => acc + p.depthCm, 0) / piezometers.length;
+  const ind = {
+    ...b.ind,
+    tpDepthCm: tp.depthCm,
+    cls: classifyTmat(tp.depthCm),
+    meanDepthCm,
+    meanCls: classifyTmat(meanDepthCm),
+    pp: { ...b.ind.pp, now: ppCompliant(tp.depthCm) },
+  };
   return {
     ...b,
+    ind,
     tDays: lerp(a.tDays, b.tDays, t),
     forcing: { ...b.forcing, riverM: lerp(a.forcing.riverM, b.forcing.riverM, t) },
     profile: {
@@ -24,11 +43,7 @@ export function lerpSnapshot(a, b, alpha) {
       depthCm: lerpArray(a.profile.depthCm, b.profile.depthCm, t),
       q: lerpArray(a.profile.q, b.profile.q, t),
     },
-    piezometers: b.piezometers.map((p, i) => {
-      const pa = a.piezometers[i];
-      if (!pa) return p;
-      return { ...p, levelM: lerp(pa.levelM, p.levelM, t), depthCm: lerp(pa.depthCm, p.depthCm, t) };
-    }),
+    piezometers,
     canal: {
       ...b.canal,
       levelM: lerp(a.canal.levelM, b.canal.levelM, t),

@@ -107,11 +107,14 @@ function syncFromModel() {
   if (finished && store.get().playing) store.set({ playing: false });
 }
 
+let lastDailyLen = -1;
 function afterStep() {
   syncFromModel();
   ui.onStep(next);
-  if (next.day !== lastDay || next.hourOfDay === 0) {
+  // grafik/tabel diperbarui saat hari berganti atau rekaman harian bertambah (termasuk hari terakhir skenario)
+  if (next.day !== lastDay || next.hourOfDay === 0 || model.daily.length !== lastDailyLen) {
     lastDay = next.day;
+    lastDailyLen = model.daily.length;
     ui.onDay(dailySeries(model));
   }
   equations.onStep(next);
@@ -154,6 +157,7 @@ function rebuild() {
   next = prev;
   view = next;
   lastDay = -1;
+  lastDailyLen = -1;
   stepper.reset();
   syncFromModel();
   ui.onReset(next, dailySeries(model));
@@ -165,8 +169,8 @@ function rebuild() {
 /** Maju n jam secara langsung (tombol ⏭ dan hook tes). */
 function stepHours(n) {
   if (n <= 0) return next;
-  prev = snapshot(model);
   next = advance(model, n);
+  prev = next; // lompatan: tidak ada interpolasi ke belakang saat ▶ ditekan sesudahnya
   view = next;
   afterStep();
   ui.onFrame(view);
@@ -177,6 +181,7 @@ function stepHours(n) {
 const actions = {
   play() {
     if (isFinished(model)) return;
+    prev = next; // mulai dari tampilan saat ini (tanpa memutar ulang jam sebelumnya)
     stepper.reset();
     store.set({ playing: true });
   },

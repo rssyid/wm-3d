@@ -25,7 +25,7 @@ export const TMAT_CLASSES = freezeAll(
     { id: 'agak-tergenang', label: 'Agak Tergenang', range: '41–45 cm', min: 40, max: 45, maxInclusive: true, cmyk: [100, 20, 0, 0], ink: '#000000', icon: '▽' },
     { id: 'normal', label: 'Normal', range: '46–60 cm', min: 45, max: 60, maxInclusive: true, cmyk: [19, 0, 59, 62], ink: '#FFFFFF', icon: '●' },
     { id: 'agak-kering', label: 'Agak Kering', range: '61–65 cm', min: 60, max: 65, maxInclusive: true, cmyk: [0, 0, 60, 0], ink: '#000000', icon: '△' },
-    { id: 'kering', label: 'Kering', range: '> 65 cm', min: 65, max: Infinity, maxInclusive: true, cmyk: [0, 100, 100, 0], ink: '#FFFFFF', icon: '▲' },
+    { id: 'kering', label: 'Kering', range: '> 65 cm', min: 65, max: Infinity, maxInclusive: true, cmyk: [0, 100, 100, 0], ink: '#000000', icon: '▲' }, // hitam di atas merah murni: kontras 5,25:1 (putih hanya 4,0:1)
   ].map((c) => ({ ...c, color: cmykToHex(c.cmyk) })),
 );
 
@@ -45,10 +45,10 @@ export const TMAS_CLASSES = freezeAll([
 ]);
 
 export const FIRE_CLASSES = freezeAll([
-  { id: 'rendah', label: 'Rendah', max: 25, color: '#2E8B57' },
-  { id: 'sedang', label: 'Sedang', max: 50, color: '#D8A300' },
-  { id: 'tinggi', label: 'Tinggi', max: 75, color: '#E06A1B' },
-  { id: 'sangat-tinggi', label: 'Sangat tinggi', max: Infinity, color: '#C0392B' },
+  { id: 'rendah', label: 'Rendah', max: 25, color: '#2E8B57', ink: '#000000' },
+  { id: 'sedang', label: 'Sedang', max: 50, color: '#D8A300', ink: '#000000' },
+  { id: 'tinggi', label: 'Tinggi', max: 75, color: '#E06A1B', ink: '#000000' },
+  { id: 'sangat-tinggi', label: 'Sangat tinggi', max: Infinity, color: '#C0392B', ink: '#FFFFFF' },
 ]);
 
 export const THRESHOLDS = Object.freeze({

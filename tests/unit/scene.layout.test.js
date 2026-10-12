@@ -180,12 +180,12 @@ test('sampling profil: muka air tanah di X scene, kanal di tepi saluran', () => 
 
 test('preset kamera: target y diskalakan VE, jarak bertambah di viewport sempit', () => {
   const a = presetPose('penampang', 10, 1.6);
-  assert.equal(a.target[1], -36);
+  assert.equal(a.target[1], -26);
   assert.ok(a.pos[1] < a.target[1] && a.pos[1] < -55 && a.pos[1] > -56, 'kamera tepat di bawah lantai potongan (lantai tidak terlihat)');
   assert.equal(a.fov, 35);
   assert.equal(a.cutaway, true);
   const b = presetPose('penampang', 20, 1.6);
-  assert.equal(b.target[1], -72);
+  assert.equal(b.target[1], -52);
   const ratio = (b.pos[1] - b.target[1]) / (a.pos[1] - a.target[1]);
   assert.ok(Math.abs(ratio - 2) < 0.05, `selisih tinggi ikut VE (${ratio})`);
   const c1 = presetPose('penampang', 1, 1.6);
@@ -203,7 +203,7 @@ test('preset kamera: target y diskalakan VE, jarak bertambah di viewport sempit'
   const narrow = presetPose('penampang', 10, 0.8);
   assert.ok(narrow.pos[2] > a.pos[2] * 1.3, 'mundur pada layar ponsel');
   const ik = presetPose('ikhtisar', 10, 1.6);
-  assert.deepEqual(ik.target, [-5, -30, -45]);
+  assert.deepEqual(ik.target, [-5, -5, -45]);
   assert.equal(easeInOutCubic(0), 0);
   assert.equal(easeInOutCubic(1), 1);
   assert.equal(easeInOutCubic(0.5), 0.5);

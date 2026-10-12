@@ -130,7 +130,17 @@ export function createModel(opts = {}) {
     // statistik
     day: newDayAcc(nP),
     daily: [],
-    hourly: createRing(HOURLY_CAP, ['k', 'rain_mm', 'tpDepthCm', 'meanDepthCm', 'tmasCm', 'q_m3s', 'riverM', 'crestM']),
+    hourly: createRing(HOURLY_CAP, [
+      'k',
+      'rain_mm',
+      'tpDepthCm',
+      'meanDepthCm',
+      'tmasCm',
+      'q_m3s',
+      'riverM',
+      'crestM',
+      ...params.piezometers.map((_, i) => `pz${i}`),
+    ]),
     roll: createRing(26, ['k', 'rain', 'et', 'outNet', 'S']),
     depth30: [],
     pp: { days: 0, compliant: 0, streak: 0, longest: 0, lastDayMeanCm: NaN },
@@ -181,11 +191,13 @@ function sanitizeScale(s) {
 
 /** Forcing yang ditampilkan (jam berjalan) — dipakai snapshot/explain; tidak memengaruhi integrasi. */
 function refreshForcing(m) {
-  const fk = forcingAt(m, m.k);
+  // jam yang sedang ditampilkan = jam terakhir yang dihitung (atau jam berjalan sebelum langkah pertama)
+  const k = Number.isFinite(m.lastForcing?.k) ? m.lastForcing.k : m.k;
+  const fk = forcingAt(m, k);
   const rain_mm = fk.rain_mm * m.rainScale;
   const etp_mm = fk.etp_mm;
   m.lastForcing = {
-    k: m.k,
+    k,
     rain_mm,
     etp_mm,
     etpDaily_mm: fk.etpDaily_mm ?? etp_mm * 24,
@@ -518,6 +530,7 @@ function recordHour(m, rain_mm, etp_mm) {
     q_m3s: q,
     riverM: m.hr,
     crestM: crestLevel(m.control.nLogs, m.params.weir),
+    ...Object.fromEntries(depths.map((d, i) => [`pz${i}`, d])),
   });
   pushRoll(m);
   if (m.k % HOURS_PER_DAY === 0) finalizeDay(m);
@@ -677,6 +690,9 @@ function recomputeTpHistory(m) {
     }
   }
   m.pp = pp;
+  // riwayat per jam juga mengikuti titik penaatan baru (dipakai tren "muka air naik/turun per 24 jam")
+  const src = m.hourly[`pz${tp}`];
+  if (src) m.hourly.tpDepthCm.set(src);
 }
 
 /** Mengubah parameter (mis. kubah Hd, Ks, parit lapangan). Simpanan W per sel dipertahankan (neraca tetap tertutup). */
@@ -915,6 +931,8 @@ export function dailySeries(m) {
     scenarioDays: m.forcing.days,
     startMonth: m.forcing.startMonth,
     piezometerIds: ids,
+    // elevasi permukaan gambut di tiap piezometer (m, rel. tanggul) — untuk merujuk TMAS/mercu ke permukaan setempat
+    surfaceM: Object.fromEntries(m.params.piezometers.map((p) => [p.id, surfaceAt(p.x, m.params.geom)])),
     tpId: m.control.tpId,
     day: recs.map((r) => r.day),
     dateLabel: recs.map((r) => r.dateLabel),

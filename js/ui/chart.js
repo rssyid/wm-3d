@@ -175,11 +175,21 @@ export function createChart(container, { meta }) {
     return true;
   }
 
+  /**
+   * Piezometer diukur dari permukaan gambut setempat, TMAS & mercu dari tanggul. Agar bisa dibandingkan pada satu sumbu,
+   * TMAS & mercu digeser ke acuan permukaan di titik penaatan (selisih = tinggi kubah di sana).
+   */
+  function canalRefCm() {
+    const s = series?.surfaceM?.[tpId];
+    return Number.isFinite(s) ? 100 * s : 0;
+  }
+
   function elevArrays() {
     if (!series || !series.n) return [];
+    const ref = canalRefCm();
     const arr = pids.map((id) => series.depthCm[id].map((d) => -d));
-    arr.push(series.tmasCm.map((t) => -t));
-    arr.push(series.crestM.map((c) => c * 100));
+    arr.push(series.tmasCm.map((t) => -t - ref));
+    arr.push(series.crestM.map((c) => c * 100 - ref));
     return arr;
   }
 
@@ -324,10 +334,11 @@ export function createChart(container, { meta }) {
     hline(yPP, px, px + pw);
     ctx.restore();
     ctx.fillStyle = col.bad;
-    ctx.textAlign = 'right';
+    // di kiri (seperti label permukaan): sisi kanan dipakai label ujung garis seri
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.font = `600 10px ${col.fontBody}`;
-    ctx.fillText(C.ppLine, px + pw - 4, yPP - 2);
+    ctx.fillText(C.ppLine, px + 6, yPP - 2);
 
     const ends = [];
     if (n) {
@@ -345,13 +356,13 @@ export function createChart(container, { meta }) {
       for (let i = 0; i < n; i++) {
         const xL = sx(series.day[i]);
         const xR = sx(series.day[i] + 1);
-        const y = syWater(series.crestM[i] * 100);
+        const y = syWater(series.crestM[i] * 100 - canalRefCm());
         if (i === 0) ctx.moveTo(xL, y);
         else ctx.lineTo(xL, y);
         ctx.lineTo(xR, y);
       }
       ctx.stroke();
-      ends.push({ id: 'Mercu', label: C.crest, y: syWater(series.crestM[n - 1] * 100), x: sx(series.day[n - 1] + 1), color: crestOn ? col.crest : col.seriesMuted, on: crestOn });
+      ends.push({ id: 'Mercu', label: C.crest, y: syWater(series.crestM[n - 1] * 100 - canalRefCm()), x: sx(series.day[n - 1] + 1), color: crestOn ? col.crest : col.seriesMuted, on: crestOn });
       // piezometer: yang tidak ditonjolkan dulu (abu), lalu yang ditonjolkan
       const order = [...pids].sort((a, b) => Number(emph.has(a)) - Number(emph.has(b)));
       for (const id of order) {
@@ -362,7 +373,7 @@ export function createChart(container, { meta }) {
       }
       // TMAS
       const tOn = emph.has('TMAS');
-      const yT = series.tmasCm.map((t) => syWater(-t));
+      const yT = series.tmasCm.map((t) => syWater(-t - canalRefCm()));
       line(xs, yT, tOn ? col.tmas : col.seriesMuted, tOn ? 2 : 1.1);
       ends.push({ id: 'TMAS', label: C.tmas, y: yT[n - 1], x: xs[n - 1], color: tOn ? col.tmas : col.seriesMuted, on: tOn });
       ctx.restore();
@@ -524,7 +535,7 @@ export function createChart(container, { meta }) {
         if (!on) continue;
         dot(x, syWater(-series.depthCm[id][hoverIdx]), colors.tmat, octx);
       }
-      if (emph.has('TMAS')) dot(x, syWater(-series.tmasCm[hoverIdx]), colors.tmas, octx);
+      if (emph.has('TMAS')) dot(x, syWater(-series.tmasCm[hoverIdx] - canalRefCm()), colors.tmas, octx);
       dot(x, syFlow(series.q_mmd[hoverIdx]), colors.q, octx);
     }
   }

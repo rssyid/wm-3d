@@ -128,7 +128,7 @@
 }
 
 .sb-scenario select {
-  max-width: 220px;
+  max-width: 260px;
 }
 
 .sb-transport {
@@ -505,8 +505,8 @@
 
 .badge-company .st {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .badge-company:has(.st-banjir) { --badge-stripe: var(--st-banjir); }
@@ -2221,4 +2221,11 @@ kbd {
     grid-template-columns: 1fr;
     gap: 2px;
   }
+}
+
+/* panel menggulir sendiri; elemen absolut (teks pembaca layar) tidak boleh memanjangkan halaman */
+#panel-left,
+#panel-right,
+#panel-bottom {
+  position: relative;
 }

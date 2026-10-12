@@ -1,5 +1,5 @@
 // Format angka Bahasa Indonesia (koma desimal, titik ribuan, tanda minus tipografis).
-import { TMAT_CLASSES, PP_LIMIT_CM } from '../model/indicators.js';
+import { TMAT_CLASSES, PP_LIMIT_CM, classifyTmat, ppCompliant } from '../model/indicators.js';
 const cache = new Map();
 function nf(digits) {
   let f = cache.get(digits);
@@ -71,12 +71,45 @@ export function classDigits(depthCm) {
   return gap < 0.05 ? 2 : gap < 0.5 ? 1 : 0;
 }
 
+function roundTo(v, d, mode) {
+  const f = 10 ** d;
+  if (mode === 'ceil') return Math.ceil(v * f) / f;
+  if (mode === 'floor') return Math.floor(v * f) / f;
+  return Math.round(v * f) / f;
+}
+
+/**
+ * Kedalaman untuk ditampilkan: dibulatkan seperlunya (classDigits), tetapi tidak pernah menyeberang ke kategori
+ * perusahaan / status PP / tanda lain. Mis. 40,0039 → 40,01 (Agak Tergenang, tidak patuh), −0,003 → −0,01 (Banjir).
+ */
+export function displayDepth(depthCm) {
+  const digits = classDigits(depthCm);
+  if (!Number.isFinite(depthCm)) return { value: depthCm, digits };
+  const cls = classifyTmat(depthCm).id;
+  const pp = ppCompliant(depthCm);
+  const same = (v) => classifyTmat(v).id === cls && ppCompliant(v) === pp && v < 0 === depthCm < 0;
+  const away = depthCm > 0 ? 'ceil' : 'floor';
+  for (const mode of ['round', away, away === 'ceil' ? 'floor' : 'ceil']) {
+    const v = roundTo(depthCm, digits, mode);
+    if (same(v)) return { value: v, digits };
+  }
+  return { value: depthCm, digits: 3 };
+}
+
 /** Elevasi TMAT (cm) dengan desimal secukupnya di dekat batas kategori: 45,08 → "−45,1 cm". */
 export function fmtElevClassCm(depthCm) {
-  return fmtElevCm(depthCm, classDigits(depthCm));
+  const { value, digits } = displayDepth(depthCm);
+  return fmtElevCm(value, digits);
 }
 
 /** Frasa kedalaman TMAT dengan desimal secukupnya di dekat batas kategori. */
 export function depthPhraseClass(depthCm) {
-  return depthPhrase(depthCm, classDigits(depthCm));
+  const { value, digits } = displayDepth(depthCm);
+  return depthPhrase(value, digits);
+}
+
+/** Angka kedalaman TMAT (positif ke bawah, tanpa satuan) yang konsisten dengan kategorinya. */
+export function fmtDepthClass(depthCm) {
+  const { value, digits } = displayDepth(depthCm);
+  return fmt(value, Math.max(digits, 1));
 }
