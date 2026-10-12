@@ -1,7 +1,7 @@
 // Tab "Tabel": tabel harian (terbaru di atas, kepala lengket) + tombol "Salin CSV".
 // Clipboard dipanggil langsung di dalam handler klik; bila ditolak, teks CSV ditampilkan
 // di textarea dan dipilih agar bisa disalin manual (tanpa unduhan berkas).
-import { fmt, fmtSigned } from './format.js';
+import { fmt, fmtSigned, classDigits } from './format.js';
 import { S } from './strings.id.js';
 import { esc } from './dom.js';
 import { dailyRows, buildCsv } from './csv.js';
@@ -13,7 +13,7 @@ const MAX_ROWS = 400; // tabel di layar; CSV selalu memuat semua hari
 /** HTML satu baris tabel (string; nilai dari model sudah berupa angka/label tetap). */
 export function rowHtml(r, ids, tpId) {
   const pz = ids
-    .map((id) => `<td class="${id === tpId ? 'is-tp' : ''}">${esc(fmtSigned(r.elev[id], 0))}</td>`)
+    .map((id) => `<td class="${id === tpId ? 'is-tp' : ''}">${esc(fmtSigned(r.elev[id], classDigits(-r.elev[id])))}</td>`)
     .join('');
   const pp = r.pp
     ? `<td class="pp-ok"><span aria-hidden="true">✓</span> ${S.table.ppOk}</td>`

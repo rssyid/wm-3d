@@ -72,17 +72,17 @@ Contoh nyata (skenario `hujan`, hari 21, array dipotong; dibuat sebelum kalibras
 {"tDays":20.21,"hourIndex":485,"day":20,"hourOfDay":5,"dateLabel":"21 Okt","scenarioId":"hujan","scenarioLabel":"Musim hujan","scenarioDays":120,"finished":false,
  "forcing":{"rain_mmh":0,"rain24h_mm":16.9,"etp_mmd":3.5,"rainScale":1,"riverM":-1.537},
  "profile":{"x":"Float64Array(30) [2.5, 7.5, …]","zs":"Float64Array(30) permukaan (m)","z":"Float64Array(30) muka air tanah (m)","depthCm":"Float64Array(30)","ponded":"Uint8Array(30)","q":"Float64Array(31) fluks muka sel m²/hari, + ke arah kanal; q[0]=ke saluran","fd":"Float64Array(30) parit lapangan m/hari","peatBaseZ":-4,"fieldDrainDepth":0.9,"fieldDrains":true,"Lh":150,"Hd":0.2},
- "piezometers":[{"id":"P3","name":"P3","note":"titik penaatan (asumsi)","x":75,"surfaceM":0.15,"levelM":-0.176,"depthCm":32.6,
-   "cls":{"id":"tergenang","label":"Tergenang","range":"0–40 cm","color":"#4572C4","ink":"#FFFFFF","icon":"▼","cmyk":[65,42,0,23]},"ppCompliant":true,"isTP":true}, "… P1, P2, P4"],
+ "piezometers":[{"id":"P3","name":"P3","note":"","x":75,"surfaceM":0.15,"levelM":-0.176,"depthCm":32.6,
+   "cls":{"id":"tergenang","label":"Tergenang","range":"0–40 cm","color":"#4572C4","ink":"#FFFFFF","icon":"▼","cmyk":[65,42,0,23]},"ppCompliant":true,"isTP":false}, "… P1, P2, P4 (isTP: true, titik penaatan bawaan)"],
  "canal":{"levelM":-0.348,"tmasCm":34.8,"tmasCls":{"id":"tinggi","label":"Tinggi","color":"#7FB2E6","ink":"#000000","icon":"▽"},"gaugeReadingCm":-34.8,"volumeM3":5175.6,"overbank":false,"bankM":0},
- "structure":{"nLogs":8,"nMax":9,"plankM":0.2,"sillM":-2,"crestM":-0.4,"widthM":1.5,"headCm":5.2,"flapGate":false,"mode":"manual","q_m3s":0.0302,"q_Ls":30.2,"q_mmd":8.52,"submerged":false,"backflow":false,"riverAboveCrest":false},
+ "structure":{"nLogs":7,"nMax":9,"plankM":0.2,"sillM":-2,"crestM":-0.6,"widthM":1.5,"headCm":5.2,"flapGate":false,"mode":"manual","q_m3s":0.0302,"q_Ls":30.2,"q_mmd":8.52,"submerged":false,"backflow":false,"riverAboveCrest":false},
  "river":{"levelM":-1.537},"ponding":{"maxCm":0,"areaFrac":0},
  "today":{"rain_mm":16.9,"et_mm":3.5,"out_mm":8.12,"dS_mm":5.27,"residual_mm":0,"hours":24},
- "ind":{"meanDepthCm":31.9,"tpId":"P3","tpDepthCm":32.6,"cls":{"…":"kategori perusahaan di titik penaatan"},"meanCls":{},
+ "ind":{"meanDepthCm":31.9,"tpId":"P4","tpDepthCm":32.6,"cls":{"…":"kategori perusahaan di titik penaatan"},"meanCls":{},
    "pp":{"now":true,"limitCm":40,"lastDayMeanCm":33.9,"lastDayCompliant":true,"daysCounted":20,"compliantDays":6,"pctDays":30,"streak":0,"longestStreak":14},
    "fire":{"index":0,"cls":{"id":"rendah","label":"Rendah","color":"#2E8B57"},"drySpellDays":0},"subs":{"rate":3.67,"cumCm":0.21}},
  "balance":{"in":44539.7,"out":41745.1,"dS":2794.7,"residual":0,"relError":0,"cum":{"rainBlock":0,"rainCanal":0,"et":0,"evapCanal":0,"outWeir":0,"backflow":0,"clamp":0,"boundary":0}},
- "control":{"mode":"manual","target":"perusahaan","tpId":"P3","lastAction":null,"log":[{"day":12,"dateLabel":"13 Okt","type":"kurangi|tambah|darurat|tahan|manual","text":"…","from":8,"to":7,"auto":true}]},
+ "control":{"mode":"manual","target":"perusahaan","tpId":"P4","lastAction":null,"log":[{"day":12,"dateLabel":"13 Okt","type":"kurangi|tambah|darurat|tahan|manual","text":"…","from":8,"to":7,"auto":true}]},
  "substepsLastHour":1}
 ```
 

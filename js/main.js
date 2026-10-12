@@ -117,6 +117,37 @@ function afterStep() {
   equations.onStep(next);
 }
 
+/** Kunci geometri scene: hanya bila berubah scene perlu dibangun ulang (mahal: shader & mesh). */
+function geomKey(params) {
+  const fd = params.fieldDrains;
+  return `${params.geom.Hd}|${fd.enabled}|${fd.spacing}|${fd.depth}`;
+}
+let sceneGeomKey = null;
+let sceneRebuildTimer = null;
+
+function rebuildSceneIfNeeded({ debounceMs = 0 } = {}) {
+  if (!scene) return;
+  clearTimeout(sceneRebuildTimer);
+  const run = () => {
+    const key = geomKey(model.params);
+    if (key === sceneGeomKey) return;
+    sceneGeomKey = key;
+    scene.rebuild?.(model.params);
+    scene.frame(view, 0, false, true);
+  };
+  if (debounceMs > 0) sceneRebuildTimer = setTimeout(run, debounceMs);
+  else run();
+}
+
+/** Segarkan snapshot & tampilan setelah input berubah saat dijeda (slider manual, pengali hujan). */
+function refreshView() {
+  next = snapshot(model);
+  view = next;
+  ui.onStep(next);
+  equations.onStep(next);
+  scene?.frame(view, 0, false, true);
+}
+
 function rebuild() {
   model = buildModel(store.get());
   prev = snapshot(model);
@@ -127,7 +158,7 @@ function rebuild() {
   syncFromModel();
   ui.onReset(next, dailySeries(model));
   equations.onStep(next);
-  scene?.rebuild?.(model.params);
+  rebuildSceneIfNeeded();
   scene?.frame(view, 0, false, true);
 }
 
@@ -151,6 +182,7 @@ const actions = {
   },
   pause() {
     store.set({ playing: false });
+    view = next; // jeda langsung membekukan tampilan di snapshot terakhir (tanpa menunggu frame berikutnya)
   },
   togglePlay() {
     if (store.get().playing) actions.pause();
@@ -162,7 +194,10 @@ const actions = {
   },
   stepHours,
   reset() {
-    store.set({ playing: false });
+    const s = store.get();
+    // mode otomatis mengubah stoplog sendiri; Ulang memutar ulang skenario dari jumlah stoplog awalnya
+    const nLogs = s.gate.mode === 'auto' && s.scenarioId !== 'manual' ? SCENARIOS[s.scenarioId].init.nLogs : s.gate.nLogs;
+    store.set({ playing: false, gate: { ...s.gate, nLogs } });
     rebuild();
   },
   setScenario(id) {
@@ -198,16 +233,26 @@ store.subscribe((s, p) => {
   if (s.land !== p.land) {
     const geomChanged = s.land.Hd !== p.land.Hd || s.land.fieldDrains !== p.land.fieldDrains;
     if (s.land.Hd !== p.land.Hd || s.land.Ks !== p.land.Ks || s.land.fieldDrains !== p.land.fieldDrains) setParams(model, paramsPatch(s.land));
-    if (s.land.tpId !== p.land.tpId) setControl(model, { tpId: s.land.tpId });
+    if (s.land.tpId !== p.land.tpId) {
+      setControl(model, { tpId: s.land.tpId });
+      // pilihan piezometer di tab Persamaan mengikuti titik penaatan bila sebelumnya menunjuk titik penaatan lama
+      if (store.get().eq.piezometer === p.land.tpId) store.patch('eq', { piezometer: s.land.tpId });
+    }
     next = snapshot(model);
     view = next;
     ui.onStep(next);
     ui.onDay(dailySeries(model));
     equations.onStep(next);
-    if (geomChanged) scene?.rebuild?.(model.params);
+    if (geomChanged) rebuildSceneIfNeeded({ debounceMs: 400 });
   }
-  if (s.rainScale !== p.rainScale) setRainScale(model, s.rainScale);
-  if (s.manual !== p.manual) setManualInputs(model, s.manual);
+  if (s.rainScale !== p.rainScale) {
+    setRainScale(model, s.rainScale);
+    refreshView();
+  }
+  if (s.manual !== p.manual) {
+    setManualInputs(model, s.manual);
+    refreshView();
+  }
   if (s.view !== p.view && scene) {
     scene.setOptions(s.view);
     if (s.view.camera !== p.view.camera) scene.setCamera(s.view.camera);
@@ -257,6 +302,7 @@ async function initScene() {
       options: store.get().view,
       onPick: (info) => ui.onPick?.(info),
     });
+    sceneGeomKey = geomKey(model.params);
     scene.setCamera(store.get().view.camera, { instant: true });
     scene.frame(view, 0, false, true);
   } catch (err) {
@@ -267,8 +313,11 @@ async function initScene() {
 }
 
 let lastTs = null;
+// pemantau laju: "Simulasi melambat" bila laju tercapai < 70% kecepatan pilihan selama ±2 detik
+let perf = { t: 0, req: 0, got: 0 };
 function frame(ts) {
-  const dt = lastTs == null ? 0 : Math.min((ts - lastTs) / 1000, 0.25);
+  const rawDt = lastTs == null ? 0 : Math.min((ts - lastTs) / 1000, 1);
+  const dt = Math.min(rawDt, 0.25);
   lastTs = ts;
   const s = store.get();
   if (s.playing) {
@@ -280,9 +329,18 @@ function frame(ts) {
       afterStep();
     }
     view = isFinished(model) ? next : lerpSnapshot(prev, next, stepper.frac);
-    if (s.status.slow !== stepper.dropped && stepper.dropped) store.patch('status', { slow: true });
+    perf.t += rawDt;
+    perf.req += rawDt * s.speedHps;
+    perf.got += n;
+    if (perf.t >= 2) {
+      const slow = !isFinished(model) && perf.got < 0.7 * perf.req;
+      if (slow !== store.get().status.slow) store.patch('status', { slow });
+      perf = { t: 0, req: 0, got: 0 };
+    }
   } else {
     view = next;
+    perf = { t: 0, req: 0, got: 0 };
+    if (s.status.slow) store.patch('status', { slow: false });
   }
   ui.onFrame(view);
   if (scene && store.get().route.view === 'sim') scene.frame(view, dt, s.playing, false);

@@ -3,7 +3,7 @@
 // batas PP 57/2016, permukaan gambut), (c) pembuangan (area + garis, mm/hari).
 // Lapisan statis digambar ulang hanya saat data/ukuran/tema/emphasis berubah; playhead & crosshair
 // di kanvas overlay (murah per frame).
-import { fmt, fmtElevCm, fmtQ } from './format.js';
+import { fmt, fmtElevCm, fmtElevClassCm, fmtQ } from './format.js';
 import { S } from './strings.id.js';
 import { cssVar, onThemeChange } from './dom.js';
 import {
@@ -560,7 +560,7 @@ export function createChart(container, { meta }) {
     const ordered = [tp, ...pids.filter((p) => p !== tp)];
     for (const id of ordered) {
       const d = series.depthCm[id][i];
-      tip.append(row(id === tp ? 'k-tmat' : 'k-muted', fmtElevCm(d), id === tp ? `${id} (titik penaatan)` : id, id === tp));
+      tip.append(row(id === tp ? 'k-tmat' : 'k-muted', fmtElevClassCm(d), id === tp ? `${id} (titik penaatan)` : id, id === tp));
     }
     const tpd = series.depthCm[tp][i];
     const cls = classifyTmat(tpd);

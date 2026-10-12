@@ -312,6 +312,7 @@ export function createControls({ store, actions, meta, simBar, left }) {
     }
     const finished = !!s.status?.finished;
     btnPlay.disabled = finished && !playing;
+    btnStep.disabled = finished;
     btnPlay.title = finished ? SB.finishedTitle : SB.playTitle;
     chipDone.hidden = !finished;
     chipSlow.hidden = !s.status?.slow;

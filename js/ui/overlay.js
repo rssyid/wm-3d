@@ -1,7 +1,7 @@
 // Lapisan di atas viewport 3D: tombol preset kamera, legenda kategori TMAT perusahaan, cap skala,
 // dan kartu detail saat objek 3D diklik (onPick). Kontainer tidak menangkap pointer — hanya kontrolnya —
 // sehingga orbit kamera tetap bisa diseret di area kosong.
-import { fmt, fmtSigned, fmtElevCm, depthPhrase, fmtQ } from './format.js';
+import { fmt, fmtSigned, fmtElevCm, fmtElevClassCm, depthPhraseClass, fmtQ } from './format.js';
 import { S } from './strings.id.js';
 import { esc, textSlot } from './dom.js';
 import { ICONS } from './icons.js';
@@ -30,7 +30,7 @@ export function pickContent(info, snap) {
         title: P.piezometer(p.id),
         sub: [P.distance(fmt(p.x, 0)), p.isTP ? P.tpTag : null].filter(Boolean).join(' · '),
         rows: [
-          [P.tmat, `${fmtElevCm(p.depthCm)}`, null, depthPhrase(p.depthCm)],
+          [P.tmat, `${fmtElevClassCm(p.depthCm)}`, null, depthPhraseClass(p.depthCm)],
           [P.category, p.cls.label, p.cls, p.cls.range],
           p.isTP
             ? [P.pp, p.ppCompliant ? S.badge.ok : S.badge.bad, null, P.isTp, p.ppCompliant ? 'ok' : 'bad']
@@ -69,7 +69,7 @@ export function pickContent(info, snap) {
         title: P.section,
         sub: P.sectionSub,
         rows: [
-          [P.meanTmat, fmtElevCm(snap.ind.meanDepthCm), snap.ind.meanCls],
+          [P.meanTmat, fmtElevClassCm(snap.ind.meanDepthCm), snap.ind.meanCls],
           [P.dome, `${fmt(pr.Hd, 2)} m`],
           [P.peat, `${fmt(pr.Hd - pr.peatBaseZ, 1)} m`, null, P.peatNote],
           [P.drains, pr.fieldDrains ? P.on : P.off],
@@ -117,7 +117,11 @@ export function createOverlay(viewport, { store, actions, meta }) {
   for (const b of camBtns) b.addEventListener('click', () => actions.setCamera(b.dataset.camera));
   const legend = root.querySelector('.vp-legend');
   const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 899px)').matches;
-  legend.open = !narrow;
+  legend.open = !narrow && store.get().view.camera === 'ikhtisar';
+  // legenda menutupi pojok kiri bawah: buka otomatis hanya di preset Ikhtisar (pengguna tetap bisa membukanya)
+  store.subscribe((s, p) => {
+    if (s.view.camera !== p.view.camera) legend.open = !narrow && s.view.camera === 'ikhtisar';
+  });
   const ve = textSlot(root.querySelector('[data-f="ve"]'));
 
   const card = root.querySelector('.vp-card');

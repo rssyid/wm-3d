@@ -1,6 +1,6 @@
 // Diagram "Alur hubungan" (#alur): Hujan → Air tanah (TMAT) → Saluran (TMAS) → Pintu air → Sungai, ET keluar
 // dari air tanah. Lebar panah ∝ fluks (mm/hari), garis putus beranimasi (statis bila gerak dikurangi / dijeda).
-import { fmt, fmtSigned, fmtElevCm, fmtQ } from './format.js';
+import { fmt, fmtSigned, fmtElevCm, fmtElevClassCm, fmtQ } from './format.js';
 import { S } from './strings.id.js';
 import { flowFluxes, edgeWidth, balanceTerms } from './flowmath.js';
 import { createNarrator } from './narrative.js';
@@ -161,10 +161,11 @@ export function createFlow(container) {
     const mm = (v) => `${fmt(v, 1)} mm/hari`;
 
     const rev = (v) => v <= -0.05;
+    // arah sudah dinyatakan oleh keterangan & panah → tampilkan besaran tanpa tanda minus
     setEdge(edges.rain, fx.rain, `${fmt(fx.rain, 1)} mm/24 jam`, F.infil);
-    setEdge(edges.seep, fx.toCanal.total, mm(fx.toCanal.total), rev(fx.toCanal.total) ? F.feedFromCanal : F.seep);
-    setEdge(edges.over, fx.discharge, mm(fx.discharge), rev(fx.discharge) ? F.back : F.over);
-    setEdge(edges.out, fx.discharge, fmtQ(st.q_m3s), rev(fx.discharge) ? F.back : S.kpi.toRiver);
+    setEdge(edges.seep, fx.toCanal.total, mm(Math.abs(fx.toCanal.total)), rev(fx.toCanal.total) ? F.feedFromCanal : F.seep);
+    setEdge(edges.over, fx.discharge, mm(Math.abs(fx.discharge)), rev(fx.discharge) ? F.back : F.over);
+    setEdge(edges.out, fx.discharge, fmtQ(Math.abs(st.q_m3s)), rev(fx.discharge) ? F.back : S.kpi.toRiver);
 
     const w = edgeWidth(fx.et);
     if (Math.abs(w - et.w) > 0.05) {
@@ -175,7 +176,7 @@ export function createFlow(container) {
 
     const tp = snap.piezometers.find((p) => p.isTP) ?? snap.piezometers[0];
     setT(nodes.rain.v, `${fmt(snap.forcing.rain24h_mm, 1)} mm · ${fmt(snap.forcing.rain_mmh, 1)} mm/jam`);
-    setT(nodes.soil.v, `${tp.id} ${fmtElevCm(tp.depthCm)} · ${snap.ind.cls.label}`);
+    setT(nodes.soil.v, `${tp.id} ${fmtElevClassCm(tp.depthCm)} · ${snap.ind.cls.label}`);
     if (nodes.soil.sw) setA(nodes.soil.sw, 'fill', snap.ind.cls.color);
     setT(nodes.canal.v, `${fmtElevCm(snap.canal.tmasCm)} · ${snap.canal.tmasCls.label}`);
     setT(nodes.gate.t, st.submerged && Math.abs(st.q_m3s) > 1e-5 ? `${F.gate} · ${F.submerged}` : F.gate);

@@ -15,6 +15,7 @@ import {
   snapshot,
   explain,
   setParams,
+  setControl,
   waterBalance,
   surfaceAt,
   DEFAULT_PARAMS,
@@ -141,4 +142,28 @@ test('explain() konsisten dengan engine', () => {
   assert.ok(Math.abs(e.canal.net - (t.rain - t.evap + t.seepage + t.drains + t.runoff - t.weir)) < 1e-9);
   assert.ok(Math.abs(e.cell.zeta - (e.cell.zs - e.cell.z)) < 1e-12);
   assert.ok(e.numerics.dt > 0 && e.numerics.dt <= 1 / 24);
+});
+
+test('ganti titik penaatan di tengah jalan: riwayat PP harian dihitung ulang dari piezometer baru', () => {
+  const m = createModel({ scenarioId: 'normal' });
+  advance(m, 24 * 10);
+  setControl(m, { tpId: 'P2' });
+  const s = snapshot(m);
+  const daily = m.daily;
+  const expected = daily.filter((r) => r.depthCm[1] <= 40).length;
+  assert.equal(s.ind.pp.compliantDays, expected);
+  assert.equal(s.ind.pp.daysCounted, daily.length);
+  for (const r of daily) {
+    assert.equal(r.tpDepthCm, r.depthCm[1]);
+    assert.equal(r.ppCompliant, r.depthCm[1] <= 40);
+  }
+});
+
+test('akhir skenario: jam ditampilkan sebagai hari terakhir 24.00', () => {
+  const m = createModel({ scenarioId: 'ekstrem' });
+  const s = advance(m, 45 * 24 + 5);
+  assert.equal(s.finished, true);
+  assert.equal(s.day, 44);
+  assert.equal(s.hourOfDay, 24);
+  assert.equal(s.dateLabel, '14 Jan');
 });

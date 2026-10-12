@@ -73,7 +73,7 @@ Bila tidak ada WebGL atau CDN, model, indikator, dan grafik tetap berjalan tanpa
 |---|---|
 | Datum | z = 0 di tepi tanggul saluran koleksi, positif ke atas. Permukaan gambut berkubah: zs(x) = Hd·(1 − (1 − x/Lh)²). |
 | TMAT | Kedalaman muka air tanah di bawah permukaan gambut setempat, ditampilkan sebagai elevasi bertanda. Contoh: "−46 cm" berarti 46 cm di bawah permukaan; nilai positif berarti banjir/genangan. |
-| TMAS | Muka air saluran, dalam cm di bawah tanggul. Bacaan papan duga = −TMAS, dengan nol di tanggul. |
+| TMAS | Muka air saluran relatif tanggul, ditampilkan sebagai elevasi bertanda (mis. "−56 cm" = 56 cm di bawah tanggul). Papan duga (nol di tanggul) menunjukkan angka yang sama. Di tab Persamaan, rumus menulis TMAS sebagai kedalaman positif lalu dikonversi ke elevasi. |
 | Pembuangan | Debit melewati pintu air: m³/s, L/s, dan mm/hari setara di atas luas blok + saluran (30,6 ha). |
 
 ## Parameter bawaan (ringkas)

@@ -113,17 +113,17 @@ Desain ini disusun lewat workflow 7 agen (draf per sudut pandang → kritik adve
 | Saluran utama | 300 m, dasar −2,2 m, lebar dasar 1,5 m, kemiringan 0,75 |
 | Luas | `Acp = 6240` m², `Atot = 306240` m² |
 | Parit lapangan | jarak `sFd = 59` m, dasar −0,9 m; bisa dimatikan dengan toggle |
-| Gambut | `Sy_s 0,30`, `Sy_d 0,08`, `λS 0,6`; `Ks 200`, `Kd 1,0` m/hari, `λK 0,25`. `Ks` dijadikan slider lanjutan 20–500. |
-| Pintu air | ambang `zSill −2,0`, lebar `Lw 1,5`, papan 0,20 m, 0–9 papan, default **8 papan (mercu −0,4 m)** (hasil kalibrasi), `Cw 1,7`, opsi pintu klep |
+| Gambut | `Sy_s 0,30`, `Sy_d 0,08`, `λS 0,6`; `Ks 50` (gambut kebun; nilai hutan ±200), `Kd 1,0` m/hari, `λK 0,25`. `Ks` dijadikan slider lanjutan 20–500. |
+| Pintu air | ambang `zSill −2,0`, lebar `Lw 1,5`, papan 0,20 m, 0–9 papan, default **7 papan (mercu −0,6 m)** (hasil kalibrasi akhir), `Cw 1,7`, opsi pintu klep |
 | Sungai | `hr = min(zR0 + 0,04·EMA_hujan(τ 5 hari), −0,15)`. Pada mode Manual, nilainya dari slider. |
-| Piezometer | P1 x = 15, P2 x = 40, **P3 x = 75 (titik penaatan, "asumsi", bisa diubah)**, P4 x = 150 (tengah blok) |
+| Piezometer | P1 x = 15, P2 x = 40, P3 x = 75, **P4 x = 150 (tengah petak = titik penaatan bawaan, P.15/2017; bisa diubah)** |
 
 **Persamaan**
 
 Sifat gambut (ζ = −z):
 - `Sy(ζ) = Sy_d + (Sy_s−Sy_d)e^(−ζ/λS)`, dan Sy = 1 saat tergenang.
 - Simpanan `W(z)` dihitung analitik. Kebalikannya, `Zinv(W)`, memakai Newton dengan fallback bisection.
-- `T(z) = Kd(D−ζ) + (Ks−Kd)λK(e^(−ζ/λK) − e^(−D/λK))`. Nilai cek: T(0) = 53,8 m²/hari.
+- `T(z) = Kd(D−ζ) + (Ks−Kd)λK(e^(−ζ/λK) − e^(−D/λK))`. Nilai cek: T(0) = 16,25 m²/hari (Ks 50; = 53,75 bila Ks 200).
 
 Neraca sel airtanah (Dupuit–Boussinesq 1D):
 - `dW_i/dt = P − ET_i − r_i − f_i + (q_{i+½} − q_{i−½})/dx`
@@ -154,7 +154,7 @@ Pintu air stoplog:
 - Spin-up 30 hari sebelum t = 0.
 
 **Skenario** (`rain.js`, `scenarios.js`)
-- PRNG `mulberry32`, kejadian hujan harian dengan rantai Markov, jumlah hujan eksponensial (maks 250 mm), lalu diskalakan agar total bulanan tepat sesuai target.
+- PRNG `mulberry32`, kejadian hujan harian dengan rantai Markov, jumlah hujan hari basah bersebaran Weibull (bentuk ≈ 0,67; maks 250 mm), lalu diskalakan agar total bulanan tepat sesuai target.
 - Disagregasi per jam dengan bentuk segitiga.
 
 | id | Hari, awal | Seed | Ciri | ETp (mm/hari) | Target kalibrasi |
@@ -313,7 +313,7 @@ Subsidensi (kalibrasi ilustratif, tanpa umpan balik ke hidrologi): `1,5 + 0,05·
    - Persamaan neraca blok: `ΔS = P − ET − Q·86400/A`.
    - Tabel neraca harian (mm) dengan residu.
 2. **Curah hujan & ET:**
-   - Rantai Markov (p01, p11), sebaran eksponensial, dan skala bulanan.
+   - Rantai Markov (p01, p11), sebaran Weibull, dan skala bulanan.
    - Disagregasi per jam.
    - Faktor β(ζ) untuk ET.
 3. **Sifat gambut:**
@@ -335,7 +335,7 @@ Subsidensi (kalibrasi ilustratif, tanpa umpan balik ke hidrologi): `1,5 + 0,05·
    - Contoh substitusi langsung, misalnya "Q = 1,7 × 1,5 × 0,182^1,5 × 1,00 = 0,198 m³/s = 55,9 mm/hari".
    - Kurva rating Q–H dengan titik operasi saat ini.
 9. **Numerik & stabilitas:**
-   - Kriteria sub-step `dt ≤ 0,5·Sy·dx²/T`.
+   - Kriteria sub-step `Δt = C / max Λ_i` (Λ memuat suku aliran, parit lapangan, dan limpasan; sederhananya `dt ≤ 0,5·Sy·dx²/T`).
    - Jumlah sub-step jam terakhir.
    - Galat neraca massa kumulatif.
 10. **Klasifikasi & kepatuhan:**

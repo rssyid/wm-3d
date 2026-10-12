@@ -3,7 +3,7 @@
 // penampang tanah, prisma & air saluran, dasar sungai, beton/papan pintu air. Sawit, tutup pipa, label, dan hujan
 // berukuran asli dan diletakkan di permukaan yang diskalakan. Render on-demand saat dijeda.
 import * as THREE from 'three';
-import { fmt, fmtElevCm, fmtQ, fmtSigned, depthPhrase } from '../ui/format.js';
+import { fmt, fmtElevCm, fmtElevClassCm, fmtQ, fmtSigned, depthPhrase, depthPhraseClass } from '../ui/format.js';
 import { makeGroundCtx, heightAt } from './ground.js';
 import { WORLD, riverCenterX } from './layout.js';
 import { PALETTE } from './palette.js';
@@ -310,8 +310,8 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
       LS.pzD[i] = d;
       LS.pzCls[i] = p.cls;
       LS.pzTp[i] = tp;
-      const txt = `${p.id} · ${fmtElevCm(p.depthCm)}`;
-      const aria = `Piezometer ${p.id}: muka air ${fmtElevCm(p.depthCm)} (${depthPhrase(p.depthCm)}), kategori ${p.cls.label}` +
+      const txt = `${p.id} · ${fmtElevClassCm(p.depthCm)}`;
+      const aria = `Piezometer ${p.id}: muka air ${fmtElevClassCm(p.depthCm)} (${depthPhraseClass(p.depthCm)}), kategori ${p.cls.label}` +
         (p.isTP ? `, titik penaatan: ${p.ppCompliant ? 'patuh' : 'tidak patuh'} PP 57/2016 (≤ 40 cm)` : '');
       labels.setContent(
         L.pz[i],
@@ -534,6 +534,11 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
       needsRender = false;
       if (view && (view !== lastView || force)) {
         applyView(view, now);
+        // lompatan waktu (⏭, ganti skenario, Ulang) saat dijeda: langit langsung ke keadaan baru tanpa transisi
+        if (force && !playing && Math.abs(cloudTarget - cloud) > 0.002) {
+          cloud = cloudTarget;
+          applyCloud(cloud);
+        }
         lastView = view;
         dirty = true;
       }
@@ -601,6 +606,13 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
       needsRender = true;
     },
     rebuild(params2) {
+      // bangun ulang hanya bila geometri yang digambar berubah (mahal: mesh + kompilasi shader)
+      const key = (q) => `${q.geom.Hd}|${q.fieldDrains.enabled}|${q.fieldDrains.spacing}|${q.fieldDrains.depth}|${q.geom.Lh}|${q.geom.zBase}`;
+      if (params2 && key(params2) === key(P)) {
+        P = params2;
+        needsRender = true;
+        return;
+      }
       P = params2 ?? P;
       ctx = makeGroundCtx(P);
       disposeWorld();

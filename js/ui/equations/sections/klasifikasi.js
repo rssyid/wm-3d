@@ -99,7 +99,7 @@ ${table(['Kategori', 'Rentang (pengguna)', 'Batas di model', 'CMYK (%)', 'Warna 
 })}
 ${h3('Kewajiban PP 57/2016')}
 ${display(row(mtext('patuh'), space('0.4em'), mo('⇔'), space('0.4em'), sub(dbar, mtext('TP')), mo('≤'), mn(String(PP_LIMIT_CM)), unit('cm')), '10.3')}
-${p(`${im(sub(dbar, mtext('TP')))} = ${esc(PP_BASIS)}. Titik penaatan bawaan adalah piezometer di tengah petak (P4), mengikuti ringkasan P.15/MENLHK/2017; dapat diganti di Kontrol → Lahan. Model juga menampilkan status sesaat (jam ini), persentase hari patuh, dan rentetan hari tidak patuh terpanjang.`)}
+${p(`${im(sub(dbar, mtext('TP')))} = ${esc(PP_BASIS)}. Titik penaatan bawaan adalah piezometer di tengah petak (P4), mengikuti ringkasan P.15/MENLHK/2017; dapat diganti di Kontrol → Lahan → Lanjutan → Titik penaatan. Model juga menampilkan status sesaat (jam ini), persentase hari patuh, dan rentetan hari tidak patuh terpanjang.`)}
 ${note(
   `<p><strong>Contoh: ${EXAMPLE_CM} cm = ${esc(exCls.label)} tetapi ${exPP ? 'patuh' : 'TIDAK patuh'} PP.</strong> ${stBadge(exCls)} ${ppBadge(exPP)}</p>
 <p>Seluruh kategori "Normal" perusahaan (46–60 cm), dan juga "Agak Tergenang" (41–45 cm), berada di luar batas PP ≤ 40 cm. Artinya, kebun yang dikelola "Normal" menurut pita internal tetap melanggar kewajiban pemerintah di titik penaatan. Hanya "Tergenang" (0–40 cm) dan "Banjir" yang memenuhi PP — padahal bagi tanaman keduanya terlalu basah. Ketegangan ini sengaja ditampilkan apa adanya.</p>`,

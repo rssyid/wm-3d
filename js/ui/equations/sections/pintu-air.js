@@ -15,6 +15,7 @@ import {
   SYM as S,
   esc,
   fmt,
+  fmtSigned,
   display,
   symTable,
   calcBox,
@@ -87,7 +88,7 @@ ${h3('Mode otomatis (aturan harian)')}
 ${p(`Pada mode <em>Otomatis</em>, jumlah stoplog dievaluasi sekali sehari (pukul 24.00 simulasi) dari kedalaman muka air tanah rata-rata 24 jam terakhir di titik penaatan ${im(bar('d'))}, untuk kedua target. Histeresis ${fmt(CONTROL_RULES.hysteresisCm, 0)} cm dan jeda minimal ${fmt(CONTROL_RULES.minIntervalDays, 0)} hari mencegah papan naik-turun terus-menerus. Jumlah papan maksimum dibatasi agar mercu tetap ≥ (ambang darurat TMAS + 10 cm) di bawah tanggul, supaya penambahan papan tidak langsung memicu aturan darurat.`)}
 ${table(
   ['Target', 'Pita [b₁, b₂]', 'Darurat bila TMAS &lt;', 'Papan maks. otomatis'],
-  Object.values(CONTROL_TARGETS).map((t) => [esc(t.label), `${t.band.join('–')} cm`, `${fmt(emergencyTmasOf(t.id), 0)} cm`, String(safeMaxLogs(w, c.params.geom.zBank, t.id))]),
+  Object.values(CONTROL_TARGETS).map((t) => [esc(t.label), t.bandLabel ?? `${t.band.join('–')} cm`, `${fmt(emergencyTmasOf(t.id), 0)} cm`, String(safeMaxLogs(w, c.params.geom.zBank, t.id))]),
   { num: [2, 3], cls: 'eq-compact', label: 'Target mode otomatis' },
 )}
 ${table(
@@ -233,7 +234,7 @@ export function live(c) {
   const al = [];
   al.push(
     textLine(
-      `Mode: <strong>${st.mode === 'auto' ? 'Otomatis' : 'Manual'}</strong> · papan ${st.nLogs} · mercu ${fmt(st.crestM, 2)} m · pintu klep ${st.flapGate ? 'terpasang' : 'tidak terpasang'} · TMAS ${fmt(c.snap.canal.tmasCm, 1)} cm (${esc(c.snap.canal.tmasCls.label)})`,
+      `Mode: <strong>${st.mode === 'auto' ? 'Otomatis' : 'Manual'}</strong> · papan ${st.nLogs} · mercu ${fmt(st.crestM, 2)} m · pintu klep ${st.flapGate ? 'terpasang' : 'tidak terpasang'} · TMAS ${fmtSigned(-c.snap.canal.tmasCm, 1)} cm (${esc(c.snap.canal.tmasCls.label)})`,
     ),
   );
   if (st.mode === 'auto') {

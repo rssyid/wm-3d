@@ -1,4 +1,4 @@
-// Generator curah hujan sintetis ber-seed: kejadian harian rantai Markov, jumlah eksponensial,
+// Generator curah hujan sintetis ber-seed: kejadian harian rantai Markov, jumlah Weibull (bentuk ≈ 0,67),
 // diskalakan ke target bulanan, lalu didisagregasi ke per jam (bentuk badai segitiga).
 
 export const MONTH_DAYS = Object.freeze([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]);

@@ -140,12 +140,12 @@ export function live(c) {
       fmt(s.out_mm[j], 1),
       `${fmtSigned(-d, 1)}`,
       `<span class="st st-${esc(cls.id)}"><span aria-hidden="true">${esc(cls.icon)}</span> ${esc(cls.label)}</span>`,
-      fmt(s.tmasCm[j], 0),
+      fmtSigned(-s.tmasCm[j], 0),
       ppBadge(s.ppCompliant[j], true),
     ]);
   }
   out['nr-table'] = rows.length
-    ? table(['Tanggal', 'Hujan (mm)', 'ETp (mm)', 'Pembuangan (mm)', `TMAT ${esc(pz)} (cm)`, `Kategori ${esc(pz)}`, 'TMAS (cm)', `PP (${esc(s.tpId)})`], rows, {
+    ? table(['Tanggal', 'Hujan (mm)', 'ETp (mm)', 'Pembuangan (mm)', `TMAT ${esc(pz)} (cm)`, `Kategori ${esc(pz)}`, 'TMAS (cm, elevasi)', `PP (${esc(s.tpId)})`], rows, {
         num: [1, 2, 3, 4, 6],
         cls: 'eq-compact',
         caption: `TMAT = elevasi muka air relatif permukaan (−45 = 45 cm di bawah permukaan); PP dinilai dari rata-rata harian di titik penaatan ${esc(s.tpId)}`,

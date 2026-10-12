@@ -132,7 +132,7 @@ export function createAbout(root, { meta } = {}) {
           dengan slider.</li>
           <li><strong>Mode Otomatis:</strong> dievaluasi sekali sehari; tambah/kurangi 1 stoplog bila rata-rata
           harian TMAT di titik penaatan keluar dari pita target (${targets
-            .map((t) => `${esc(t.id === 'pp' ? 'PP' : 'perusahaan')} ${t.band[0]}–${t.band[1]} cm, maks. ${safeMaxLogs(weir, 0, t.id)} stoplog`)
+            .map((t) => `${esc(t.id === 'pp' ? 'PP' : 'perusahaan')} ${t.bandLabel ?? `${t.band[0]}–${t.band[1]} cm`}, maks. ${safeMaxLogs(weir, 0, t.id)} stoplog`)
             .join('; ')}), dengan histeresis 3 cm dan jeda ≥ 2 hari. Jumlah papan dibatasi agar mercu tidak terlalu
           dekat ke tanggul; bila target tidak tercapai pada jumlah maksimum, log mencatat “target tidak tercapai”.
           Darurat (TMAS terlalu dangkal atau ada genangan): buang 2 papan bila sungai lebih rendah dari saluran.</li>

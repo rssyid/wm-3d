@@ -1,7 +1,7 @@
 // Panel kanan: badge kepatuhan (perusahaan & PP 57/2016), kartu KPI (hujan, TMAT, TMAS, pembuangan),
 // risiko kebakaran, subsidensi, dan log aksi pintu air. Tulis DOM hanya bila teks berubah.
 import { rainClass, hourlySeries, TMAT_CLASSES } from '../model/index.js';
-import { fmt, fmtSigned, fmtElevCm, depthPhrase, fmtQ, fmtPct } from './format.js';
+import { fmt, fmtSigned, fmtElevCm, fmtElevClassCm, depthPhraseClass, fmtQ, fmtPct } from './format.js';
 import { S } from './strings.id.js';
 import { esc, textSlot, setStatusClass } from './dom.js';
 import { ICONS } from './icons.js';
@@ -214,19 +214,19 @@ export function createKpi(root, { meta, actions }) {
     // TMAT
     const tp = v.piezometers.find((p) => p.isTP) ?? v.piezometers[0];
     el.tmatSub.set(K.tmatSub(tp.id));
-    el.tmatVal.set(fmtElevCm(tp.depthCm));
-    el.tmatPhrase.set(depthPhrase(tp.depthCm));
+    el.tmatVal.set(fmtElevClassCm(tp.depthCm));
+    el.tmatPhrase.set(depthPhraseClass(tp.depthCm));
     setTmatChip(v.ind.cls);
     let sum = 0;
     for (const p of v.piezometers) {
       sum += p.depthCm;
       const row = pzRows[p.id];
       if (!row) continue;
-      row.v.set(fmtElevCm(p.depthCm));
+      row.v.set(fmtElevClassCm(p.depthCm));
       setStatusClass(row.sw, p.cls.id);
       row.li.classList.toggle('is-tp', !!p.isTP);
     }
-    el.tmatMean.set(fmtElevCm(sum / v.piezometers.length));
+    el.tmatMean.set(fmtElevClassCm(sum / v.piezometers.length));
     el.tmatRise.set(rise);
 
     // TMAS
@@ -262,7 +262,7 @@ export function createKpi(root, { meta, actions }) {
     // badge perusahaan
     el.companySub.set(B.companySub(ind.tpId));
     setCompanyChip(ind.cls);
-    el.companyFoot.set(`${ind.cls.range} · ${fmtElevCm(ind.tpDepthCm)}`);
+    el.companyFoot.set(`${ind.cls.range} · ${fmtElevClassCm(ind.tpDepthCm)}`);
     // badge PP
     const ok = !!ind.pp.now;
     if (ok !== ppOkState) {
@@ -273,7 +273,7 @@ export function createKpi(root, { meta, actions }) {
     }
     el.ppPct.set(ind.pp.daysCounted ? B.pctValue(fmtPct(ind.pp.pctDays), fmt(ind.pp.compliantDays, 0), fmt(ind.pp.daysCounted, 0)) : B.noDays);
     el.ppStreak.set(B.days(fmt(ind.pp.longestStreak, 0)));
-    el.ppFoot.set(Number.isFinite(ind.pp.lastDayMeanCm) ? B.lastDay(fmtElevCm(ind.pp.lastDayMeanCm).replace(' ', '\u00a0')) : `${fmtElevCm(ind.tpDepthCm)} · batas ${fmtElevCm(ind.pp.limitCm ?? 40)}`);
+    el.ppFoot.set(Number.isFinite(ind.pp.lastDayMeanCm) ? B.lastDay(fmtElevClassCm(ind.pp.lastDayMeanCm).replace(' ', '\u00a0')) : `${fmtElevClassCm(ind.tpDepthCm)} · batas ${fmtElevCm(ind.pp.limitCm ?? 40)}`);
     const warn = tensionNote(ind.cls, ok);
     const note = warn ?? wetNote(ind.cls, ok);
     if (el.tension.hidden !== !note) el.tension.hidden = !note;

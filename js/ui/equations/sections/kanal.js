@@ -95,7 +95,7 @@ export function live(c) {
     { sym: S.qb, arti: 'rembesan per meter tepi saluran', unit: 'm²/hari', val: fmt(cn.qb, 4) },
     { sym: S.Eow, arti: 'laju evaporasi air terbuka', unit: 'mm/hari', val: fmt(1000 * cn.Eow, 2) },
     { sym: S.Q, arti: 'debit pintu air', unit: 'm³/s', val: fmt(c.e.weir.Q, 4) },
-    { sym: S.TMAS, arti: 'tinggi muka air saluran di bawah tanggul', unit: 'cm', val: fmt(c.snap.canal.tmasCm, 1) },
+    { sym: S.TMAS, arti: 'kedalaman muka air saluran di bawah tanggul (KPI dan papan duga menampilkannya sebagai elevasi −TMAS)', unit: 'cm', val: `${fmt(c.snap.canal.tmasCm, 1)} → elevasi ${fmtSigned(-c.snap.canal.tmasCm, 1)}` },
   ]);
 
   // tabel segmen
@@ -133,7 +133,7 @@ export function live(c) {
     ),
   );
   L.push(line(fn(mi('V'), [S.hc]), null, `${fmt(canalVolume(h, g.segments, g.zBank), 1)} m³`, { note: `Σ semua segmen; keadaan model V<sub>c</sub> = ${fmt(cn.V, 1)} m³` }));
-  L.push(line(S.TMAS, row(mn('100'), mo('×'), paren(row(nm(g.zBank, 0), mo('−'), nmp(h, 3)))), `${fmt(c.snap.canal.tmasCm, 1)} cm`, { note: `papan duga ${fmtSigned(c.snap.canal.gaugeReadingCm, 1)} cm · kelas ${esc(c.snap.canal.tmasCls.label)}` }));
+  L.push(line(S.TMAS, row(mn('100'), mo('×'), paren(row(nm(g.zBank, 0), mo('−'), nmp(h, 3)))), `${fmt(c.snap.canal.tmasCm, 1)} cm`, { note: `→ elevasi ${fmtSigned(-c.snap.canal.tmasCm, 1)} cm (seperti KPI dan papan duga) · kelas ${esc(c.snap.canal.tmasCls.label)}` }));
   if (cn.fixed) L.push(textLine('Uji dengan muka air saluran tetap: neraca saluran tidak diintegrasi.'));
   out['kn-calc'] = L.join('');
 

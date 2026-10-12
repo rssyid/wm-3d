@@ -36,10 +36,10 @@ The task is a static web app, with no build step, that shows how water moves thr
 | three.js version | **0.185.1** (has the min builds), not 0.186.1. |
 | How three.js is loaded | CDN import map in production. Tests intercept the CDN and serve from `node_modules/three`. Vendoring is not used (it would contradict decision 1). |
 | Model location | The model lives in `js/model/` and uses the physics of the hydrology section. The architecture section's simpler model is dropped. |
-| Gate geometry | Comes from the model: sill −2.0 m, 0.20 m planks, 0–9 planks, default 7 planks (crest −0.6 m), bay width 1.5 m. The catchment is the block itself (30.6 ha). |
-| Piezometers | 4 piezometers on one half-transect. The titik penaatan is P3. |
+| Gate geometry | Comes from the model: sill −2.0 m, 0.20 m planks, 0–9 planks, default 7 planks (crest −0.6 m; final calibration), bay width 1.5 m. The catchment is the block itself (30.6 ha). |
+| Piezometers | 4 piezometers on one half-transect. The titik penaatan is P4 (block centre, per P.15/2017 summaries) — updated after review. |
 | Papan duga | Zero at the bank. |
-| River | Rises with an exponential moving average (EMA) of rain, capped at −0.4 m. |
+| River | Rises with an exponential moving average (EMA) of rain, capped at −0.15 m (gR 0.04) — updated after calibration. |
 | Field drains | Modelled and drawn. |
 | Display of water levels | Signed elevation in cm relative to the peat surface (negative = below), e.g. "TMAT −45 cm (45 cm di bawah permukaan)". |
 
@@ -87,12 +87,12 @@ All model code lives in `js/model/`. These modules are pure: no DOM, no `three`,
 | `Acp`, `Atot` | 6240 m², 306 240 m² | 1 mm ≈ 306 m³; 0.1 m³/s ≈ 28.2 mm/d |
 | Field drains (parit lapangan) | `sFd = 59` m (every 8 rows), bed `zFd = −0.9`. They run perpendicular to the collection drains. `sFd = 0` turns them off. | Better Crops |
 | Palms | triangular 8.5 m spacing, 160/ha, row spacing 7.36 m | |
-| Peat hydraulics | `Sy_s .30`, `Sy_d .08`, `λS .6`; `Ks 200`, `Kd 1.0` m/d, `λK .25` | Ismail 2021; Baird 2017. ⚠ `Ks` is uncertain and exposed as an advanced slider (20–500). |
+| Peat hydraulics | `Sy_s .30`, `Sy_d .08`, `λS .6`; `Ks 50` (updated; forest ≈ 200), `Kd 1.0` m/d, `λK .25` | Ismail 2021; Baird 2017; Kurnianto 2019. ⚠ `Ks` is uncertain and exposed as an advanced slider (20–500). |
 | ET | `ETp` comes from the scenario. β = 1 down to ζ = 0.4 m, linear to 0.3 at 1.2 m, and → 0 in the last 0.2 m above the peat base. Open-water evaporation `Eow = 1.1·ETp`. | ⚠ assumption |
 | Surface runoff | `ks = 2` d⁻¹ | assumption |
 | Weir | `zSill −2.0`, `Lw 1.5`, `plank 0.20`, `nMax 9`, **`nLogs 7` (crest −0.6)**, `Cw 1.7`, `flapGate false` | A crest of −0.6 matches the RSPO drain target (50–70 cm). |
 | River | `zR0` per scenario, `gR 0.03` m/(mm/d), `τR 5` d, `zRMax −0.4` | ⚠ illustrative; the cap keeps the river below the bank |
-| Piezometers | P1 x = 15 ("dekat kanal"), P2 x = 40, **P3 x = 75 (titik penaatan, "asumsi")**, P4 x = 150 ("tengah blok") | ⚠ P.15/2017 rules for siting the compliance point are not verified; it is configurable. |
+| Piezometers | P1 x = 15 ("dekat kanal"), P2 x = 40, P3 x = 75, **P4 x = 150 ("tengah blok", titik penaatan bawaan)** | ⚠ P.15/2017 rules for siting the compliance point are not verified; it is configurable. |
 | Numerics | `C = 0.5`, canal coupling factor 0.4, dt floor 1e-5 d, `spinUpDays 30` | |
 
 ### Equations (ζ = −z ≥ 0)
@@ -690,7 +690,7 @@ Console capture:
 - Version choice: 0.185.1 is chosen over the newer 0.186.1 for its min builds. r185 deprecations (`Clock`, `PCFSoftShadowMap`) must be avoided, or the no-warnings check fails.
 
 **Regulatory**
-- Not verified: P.15/MENLHK/2017 rules for siting the titik penaatan and for averaging (P3 is labelled "asumsi" and is configurable); whether PP 22/2021 changes the status of PP 71/2014; the SiMATAG sign convention; papan duga zero conventions in the field; the BMKG daily rain classes.
+- Not verified: P.15/MENLHK/2017 rules for siting the titik penaatan and for averaging (titik penaatan now P4 at the block centre; daily-mean basis labelled a model assumption); whether PP 22/2021 changes the status of PP 71/2014; the SiMATAG sign convention; papan duga zero conventions in the field; the BMKG daily rain classes.
 
 **Physics and calibration**
 - Near-surface K, the β ET curve, the river response, the subsidence calibration, the Villemonte exponents (from memory), the "Riau-like" monthly normals and the storm magnitude are all illustrative.

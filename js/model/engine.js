@@ -651,8 +651,32 @@ export function setControl(m, patch = {}) {
       c.nLogs = n;
     }
   }
-  for (const key of ['flapGate', 'mode', 'target', 'tpId']) if (patch[key] !== undefined) c[key] = patch[key];
+  for (const key of ['flapGate', 'mode', 'target']) if (patch[key] !== undefined) c[key] = patch[key];
+  if (patch.tpId !== undefined && patch.tpId !== c.tpId) {
+    c.tpId = patch.tpId;
+    recomputeTpHistory(m);
+  }
   return snapshot(m);
+}
+
+/** Titik penaatan berganti: hitung ulang kedalaman TP harian dan statistik PP dari kedalaman harian yang tersimpan. */
+function recomputeTpHistory(m) {
+  const tp = tpIndex(m);
+  const pp = { days: 0, compliant: 0, streak: 0, longest: 0, lastDayMeanCm: NaN };
+  for (const rec of m.daily) {
+    rec.tpDepthCm = rec.depthCm[tp];
+    rec.ppCompliant = ppCompliant(rec.tpDepthCm);
+    pp.days++;
+    pp.lastDayMeanCm = rec.tpDepthCm;
+    if (rec.ppCompliant) {
+      pp.compliant++;
+      pp.streak = 0;
+    } else {
+      pp.streak++;
+      if (pp.streak > pp.longest) pp.longest = pp.streak;
+    }
+  }
+  m.pp = pp;
 }
 
 /** Mengubah parameter (mis. kubah Hd, Ks, parit lapangan). Simpanan W per sel dipertahankan (neraca tetap tertutup). */
@@ -716,7 +740,10 @@ export function snapshot(m) {
   const { geo, params, control } = m;
   const N = geo.N;
   const kk = Math.max(m.k, 0);
-  const day = Math.floor(kk / HOURS_PER_DAY);
+  const finished = isFinished(m);
+  // di akhir skenario tampilkan "hari terakhir, 24.00" (bukan hari sesudahnya)
+  const day = finished ? m.forcing.days - 1 : Math.floor(kk / HOURS_PER_DAY);
+  const hourOfDay = finished ? HOURS_PER_DAY : kk % HOURS_PER_DAY;
   const crest = crestLevel(control.nLogs, params.weir);
   const tmasCm = 100 * (geo.zBank - m.hc);
   const wd = weirDetail(m.hc, m.hr, crest, params.weir, control.flapGate);
@@ -748,12 +775,12 @@ export function snapshot(m) {
     tDays: kk / HOURS_PER_DAY,
     hourIndex: kk,
     day,
-    hourOfDay: kk % HOURS_PER_DAY,
+    hourOfDay,
     dateLabel: dateLabel(day, m.forcing.startMonth),
     scenarioId: m.forcing.scenarioId,
     scenarioLabel: m.forcing.label,
     scenarioDays: m.forcing.days,
-    finished: isFinished(m),
+    finished,
     forcing: {
       rain_mmh: m.lastForcing.rain_mm,
       rain24h_mm: rain24,

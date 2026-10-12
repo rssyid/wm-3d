@@ -2,9 +2,9 @@
 
 export const CONTROL_TARGETS = Object.freeze({
   // keduanya memakai kedalaman rata-rata harian di titik penaatan (sama dengan badge di UI)
-  perusahaan: Object.freeze({ id: 'perusahaan', label: 'Perusahaan – Normal (46–60 cm)', band: Object.freeze([45, 60]), emergencyTmasCm: 20 }),
+  perusahaan: Object.freeze({ id: 'perusahaan', label: 'Perusahaan – Normal (46–60 cm)', band: Object.freeze([45, 60]), bandLabel: '46–60 cm', emergencyTmasCm: 20 }),
   // target PP: pita di bawah 40 cm agar ada ruang sebelum melanggar; kanal boleh lebih tinggi (darurat < 10 cm)
-  pp: Object.freeze({ id: 'pp', label: 'PP 71/2014 jo 57/2016 (≤ 40 cm di titik penaatan)', band: Object.freeze([15, 37]), emergencyTmasCm: 10 }),
+  pp: Object.freeze({ id: 'pp', label: 'PP 71/2014 jo 57/2016 (≤ 40 cm di titik penaatan)', band: Object.freeze([15, 37]), bandLabel: '15–37 cm', emergencyTmasCm: 10 }),
 });
 
 export const CONTROL_RULES = Object.freeze({ hysteresisCm: 3, minIntervalDays: 2, emergencyTmasCm: 20, emergencyDrop: 2, riverMarginM: 0.05 });
