@@ -110,12 +110,12 @@ test('preset kamera ikhtisar / penampang / pintu-air / atas (tween 0,8 s)', { ti
   await context.close();
 });
 
-test('skenario ekstrem hari 15: genangan terlihat, hujan, peringatan air balik', { timeout: 240000 }, async () => {
+test('skenario ekstrem hari 15: genangan terlihat, hujan, peringatan pintu terendam', { timeout: 240000 }, async () => {
   const { context, page, logs } = await openApp();
   const snap = await page.evaluate(() => {
     window.wmApp.setScenario('ekstrem');
     const s = window.wmApp.stepDays(15);
-    return { pond: s.ponding.maxCm, rain: s.forcing.rain_mmh, riverAbove: s.structure.riverAboveCrest };
+    return { pond: s.ponding.maxCm, rain: s.forcing.rain_mmh, riverAbove: s.structure.riverAboveCrest, q: s.structure.q_m3s };
   });
   assert.ok(snap.pond > 0, 'model tergenang');
   await page.waitForTimeout(1500); // langit menggelap (τ 0,6 s)
@@ -124,7 +124,9 @@ test('skenario ekstrem hari 15: genangan terlihat, hujan, peringatan air balik',
   if (snap.rain >= 0.1) assert.ok(si.rain > 0, 'garis hujan tampil');
   assert.ok(si.cloud > 0.5, `mendung ${si.cloud}`);
   const gateText = await page.locator('[data-scene="gate"]').textContent();
-  if (snap.riverAbove) assert.match(gateText, /Air balik/);
+  // sungai di atas mercu: "Terendam" bila air masih keluar, "Aliran balik" hanya bila Q < 0
+  if (snap.riverAbove) assert.match(gateText, snap.q < 0 ? /Aliran balik/ : /Terendam/);
+  assert.doesNotMatch(gateText, /Air balik/);
   await vpShot(page, 'scene-ekstrem');
   await page.evaluate(() => window.wmApp.actions.setCamera('pintu-air'));
   await page.waitForTimeout(1100);
@@ -289,6 +291,17 @@ test('prefers-reduced-motion: preset kamera langsung tanpa tween', { timeout: 24
   });
   assert.equal(r.preset, 'atas');
   assert.ok(r.camera[1] > 250, `kamera langsung di atas (${r.camera[1]})`);
+  assert.equal(r.reduceMotion, true);
+  // garis hujan tetap tampil tetapi tidak bergerak saat simulasi berjalan
+  await page.evaluate(() => {
+    window.wmApp.setScenario('ekstrem');
+    window.wmApp.stepDays(14);
+    window.wmApp.actions.play();
+  });
+  await page.waitForTimeout(800);
+  const m = await sceneInfo(page);
+  await page.evaluate(() => window.wmApp.actions.pause());
+  assert.equal(m.rainTime, 0, 'animasi hujan diam di mode gerak dikurangi');
   assertClean(logs);
   await context.close();
 });
@@ -309,6 +322,57 @@ test('bangun ulang geometri: kubah 0,6 m dan parit lapangan dimatikan', { timeou
   assert.deepEqual(await page.evaluate(async () => (await import('./js/scene/index.js')).sceneDebug.nanGeometries()), []);
   const info = await page.evaluate(() => window.wmApp.renderInfo());
   assert.ok(info.calls > 0 && info.calls <= 60);
+  assertClean(logs);
+  await context.close();
+});
+
+test('skenario normal (60 hari, berjalan) dan Manual (hujan lebat, sungai tinggi): label konsisten dengan snapshot', { timeout: 300000 }, async () => {
+  const { context, page, logs } = await openApp();
+  // normal: jalankan sebentar dengan play (partikel & interpolasi aktif), lalu jeda
+  await page.evaluate(() => {
+    window.wmApp.stepDays(60);
+    window.wmApp.actions.play();
+  });
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => window.wmApp.actions.pause());
+  await page.waitForTimeout(200);
+  const tp = await page.evaluate(() => {
+    window.wmApp.renderOnce();
+    const s = window.wmApp.getSnapshot();
+    const p = s.piezometers.find((x) => x.isTP);
+    return { id: p.id, ok: p.ppCompliant, text: document.querySelector(`[data-scene="pz-${p.id}"]`)?.textContent ?? '' };
+  });
+  assert.match(tp.text, tp.ok ? /PP ✓ patuh/ : /PP ✗ tidak patuh/, `tag TP ${tp.text}`);
+  await vpShot(page, 'scene-normal-60');
+  // Manual: hujan 150 mm/hari, sungai −0,3 m
+  await page.selectOption('#skenario', 'manual');
+  await page.evaluate(() => {
+    window.wmApp.store.patch('manual', { rainMmd: 150, riverM: -0.3 });
+    window.wmApp.stepDays(5);
+  });
+  await page.waitForTimeout(1500);
+  const man = await page.evaluate(async () => {
+    const { fmtElevCm } = await import('./js/ui/format.js');
+    window.wmApp.renderOnce();
+    const s = window.wmApp.getSnapshot();
+    return {
+      scen: s.scenarioId,
+      rain: s.forcing.rain_mmh,
+      gauge: document.querySelector('[data-scene="gauge"]')?.textContent ?? '',
+      tmas: `TMAS ${fmtElevCm(s.canal.tmasCm)}`,
+    };
+  });
+  assert.equal(man.scen, 'manual');
+  assert.ok(man.gauge.includes(man.tmas), `${man.gauge} memuat ${man.tmas}`);
+  const si = await sceneInfo(page);
+  if (man.rain >= 0.1) assert.ok(si.rain > 0, 'hujan tampil di mode Manual');
+  await vpShot(page, 'scene-manual');
+  await page.evaluate(() => window.wmApp.actions.setCamera('pintu-air'));
+  await page.waitForTimeout(1100);
+  await vpShot(page, 'scene-manual-pintu-air');
+  await page.evaluate(() => window.wmApp.actions.setCamera('atas'));
+  await page.waitForTimeout(1100);
+  await vpShot(page, 'scene-manual-atas');
   assertClean(logs);
   await context.close();
 });

@@ -1,6 +1,6 @@
 // Bagian 11 — Parameter model (semua entri DEFAULT_PARAMS) dan daftar referensi.
 // Nilai dari explain().params (parameter aktif) dibandingkan dengan DEFAULT_PARAMS dan DEFAULT_CONTROL.
-import { DEFAULT_PARAMS, DEFAULT_CONTROL, getPath } from '../../../model/index.js';
+import { DEFAULT_PARAMS, DEFAULT_CONTROL, getPath, crestLevel } from '../../../model/index.js';
 import { mi, mn, mo, row, sub, mtext, up } from '../mathml.js';
 import { SYM as S, esc, fmt, fmtSci, table, h3, p, im, note, display } from '../common.js';
 import { eq, space, sum } from '../mathml.js';
@@ -48,14 +48,14 @@ const META = {
   'weir.nMax': [s('n', 'maks'), '–', 'jumlah papan maksimum', 'desain', 0],
   'weir.Cw': [S.Cw, 'm½/s', 'koefisien debit ambang (ambang lebar ≈ 1,7)', 'hidraulika standar', 2],
   'river.gR': [S.gR, 'm per mm/hari', 'kepekaan muka sungai terhadap hujan rata-rata', 'ilustratif', 2],
-  'river.tauR': [S.tauR, 'hari', 'waktu tunda respons sungai', 'ilustratif', 0],
+  'river.tauR': [S.tauR, 'hari', 'konstanta waktu respons sungai terhadap hujan', 'ilustratif', 0],
   'river.zRMax': [S.zRmax, 'm', 'batas atas muka sungai', 'ilustratif (sungai bisa merendam pintu air saat ekstrem)', 2],
   'numerics.C': [S.C, '–', 'faktor aman stabilitas (Courant)', 'numerik', 2],
   'numerics.canalCoupling': [S.ck, '–', 'faktor batas kopling saluran', 'numerik', 2],
   'numerics.dtMin': [S.dtmin, 'hari', 'sub-langkah minimum', 'numerik', 5],
-  'numerics.spinUpDays': [mtext('spin-up'), 'hari', 'lama pemanasan sebelum hari 1', 'numerik', 0],
+  'numerics.spinUpDays': [sub(mi('n'), mtext('spin‑up')), 'hari', 'lama pemanasan (spin-up) sebelum hari 1', 'numerik', 0],
   'numerics.bisectIter': [sub(mi('n'), mtext('bis')), '–', 'iterasi bisection muka air saluran', 'numerik', 0],
-  fixedCanalLevel: [mtext('h_tetap'), 'm', 'kaitan uji: muka saluran dipatok (null = tidak)', 'hanya untuk uji unit', 2],
+  fixedCanalLevel: [sub(mi('h'), mtext('tetap')), 'm', 'kait uji: muka air saluran dipatok (kosong = tidak dipakai)', 'hanya untuk uji unit', 2],
 };
 
 function flatten(obj, prefix = '', out = []) {
@@ -129,7 +129,14 @@ export function live(c) {
   }
   const ctl = c.snap.control;
   rows.push([im(mtext('TP')), esc(ctl.tpId), '–', 'titik penaatan aktif <code class="eq-muted">control.tpId</code>', `bawaan ${esc(DEFAULT_CONTROL.tpId)} (tengah petak, P.15/2017)`]);
-  rows.push([im(S.n), String(c.snap.structure.nLogs), '–', 'jumlah papan stoplog saat ini <code class="eq-muted">control.nLogs</code>', `bawaan ${DEFAULT_CONTROL.nLogs} (TMAS ≈ 60 cm, kisaran BMP)`]);
+  const crest0 = crestLevel(DEFAULT_CONTROL.nLogs, DEFAULT_PARAMS.weir);
+  rows.push([
+    im(S.n),
+    String(c.snap.structure.nLogs),
+    '–',
+    'jumlah papan stoplog saat ini <code class="eq-muted">control.nLogs</code>',
+    `bawaan ${DEFAULT_CONTROL.nLogs} (mercu ${fmt(crest0, 1)} m: air dibuang bila TMAS &lt; ${fmt(100 * (DEFAULT_PARAMS.geom.zBank - crest0), 0)} cm; kisaran BMP 50–70 cm)`,
+  ]);
   const out = {};
   out['pm-table'] = table(['Simbol', 'Nilai', 'Satuan', 'Arti', 'Sumber / asumsi'], rows, {
     num: [1],

@@ -20,7 +20,7 @@ import {
   chartLayout,
   classBands,
 } from './chartmath.js';
-import { classifyTmat, ppCompliant } from '../model/index.js';
+import { classifyTmat, ppCompliant, DEFAULT_CONTROL } from '../model/index.js';
 
 const C = S.chart;
 
@@ -97,8 +97,8 @@ export function createChart(container, { meta }) {
 
   const pids = (meta.piezometers ?? []).map((p) => p.id);
   const seriesIds = [...pids, 'TMAS', 'Mercu'];
-  let emph = new Set(['P3', 'TMAS', 'Mercu']);
-  let tpId = 'P3';
+  let tpId = DEFAULT_CONTROL.tpId; // diperbarui dari series.tpId
+  let emph = new Set([tpId, 'TMAS', 'Mercu']);
   let userTouched = false;
   const legendBtns = {};
   for (const id of seriesIds) {

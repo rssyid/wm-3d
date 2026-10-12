@@ -31,8 +31,10 @@ export function pickContent(info, snap) {
         sub: [P.distance(fmt(p.x, 0)), p.isTP ? P.tpTag : null].filter(Boolean).join(' · '),
         rows: [
           [P.tmat, `${fmtElevCm(p.depthCm)}`, null, depthPhrase(p.depthCm)],
-          [P.category, p.cls.label, p.cls],
-          [P.pp, p.ppCompliant ? S.badge.ok : S.badge.bad, null, p.isTP ? P.isTp : P.notTp, p.ppCompliant ? 'ok' : 'bad'],
+          [P.category, p.cls.label, p.cls, p.cls.range],
+          p.isTP
+            ? [P.pp, p.ppCompliant ? S.badge.ok : S.badge.bad, null, P.isTp, p.ppCompliant ? 'ok' : 'bad']
+            : [P.ppLimit, p.ppCompliant ? P.limitMet : P.limitExceeded, null, P.notTp, p.ppCompliant ? 'ok' : 'bad'],
         ],
       };
     }
@@ -54,10 +56,11 @@ export function pickContent(info, snap) {
         sub: st.mode === 'auto' ? S.extra.auto : S.extra.manual,
         rows: [
           [P.logs, `${st.nLogs} / ${st.nMax}`, null, `${P.crest.toLowerCase()} ${fmtElevCm(-st.crestM * 100)}`],
+          [P.tmas, fmtElevCm(snap.canal.tmasCm), null, P.upstream],
           [P.q, fmtQ(st.q_m3s), null, `${fmt(st.q_m3s * 1000, 1)} L/s`],
           [P.head, `${fmt(st.headCm, 1)} cm`],
           [P.submerged, yesNo(st.submerged), null, st.flapGate ? P.flapOn : ''],
-          [P.river, `${fmtSigned(snap.river.levelM, 2)} m`],
+          [P.river, `${fmtSigned(snap.river.levelM * 100, 0)} cm`, null, P.relBank],
         ],
       };
     case 'section': {
@@ -122,6 +125,7 @@ export function createOverlay(viewport, { store, actions, meta }) {
   const cardSub = card.querySelector('.vp-card-sub');
   const cardRows = card.querySelector('.vp-card-rows');
   let pick = null;
+  let returnFocus = null;
   let pos = { x: 0, y: 0 };
   let lastKey = '';
 
@@ -187,12 +191,20 @@ export function createOverlay(viewport, { store, actions, meta }) {
     pos = Number.isFinite(cx) && Number.isFinite(cy) ? { x: cx, y: cy } : { x: r.width, y: 0 };
     card.hidden = false;
     place();
+    // dibuka dari label (tombol, bisa lewat keyboard): pindahkan fokus ke kartu, kembalikan saat ditutup
+    if (info.source === 'label') {
+      returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      card.focus({ preventScroll: true });
+    } else returnFocus = null;
   }
 
   function close() {
     if (card.hidden && !pick) return;
     pick = null;
+    const hadFocus = card.contains(document.activeElement);
     card.hidden = true;
+    if (hadFocus && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+    returnFocus = null;
   }
 
   card.querySelector('.vp-card-close').addEventListener('click', close);

@@ -33,7 +33,7 @@ export function render(c) {
   const g = c.e.geometry;
   const fd = c.params.fieldDrains;
   return `
-${p(`Lahan gambut alami membentuk <strong>kubah</strong>: tengah blok lebih tinggi daripada tepi saluran karena gambut terbentuk dari air hujan yang tertahan. Di model ini kubah adalah bagian dari fisika, bukan hanya tampilan: permukaan ${im(S.zs)} menentukan kedalaman lokal muka air tanah, sedangkan aliran digerakkan oleh <em>elevasi absolut</em> muka air ${im(S.z)}.`)}
+${p(`Permukaan gambut di blok kebun tidak datar: tengah blok biasanya lebih tinggi daripada tepi saluran. Penyebabnya, bentang gambut ombrogen memang berbentuk <strong>kubah</strong>, dan gambut di dekat saluran lebih lama kering sehingga lebih cepat mengalami subsidensi. Di model ini kubah adalah bagian dari fisika, bukan hanya tampilan: permukaan ${im(S.zs)} menentukan kedalaman lokal muka air tanah, sedangkan aliran digerakkan oleh <em>elevasi absolut</em> muka air ${im(S.z)}.`)}
 ${display(row(eq(fn(S.zs, [S.x]), row(S.zbank, mo('+'), S.Hd, mo('·'), paren(row(mn('1'), mo('−'), sup(paren(row(mn('1'), mo('−'), u)), mn('2')))))), mo(','), space('1.2em'), eq(u, fn('min', [fn('max', [row(S.x, mo('/'), S.Lh), mn('0')], ';'), mn('1')], ';'))), '4.1')}
 ${display(row(eq(sub(S.x, mi('i')), row(paren(row(mi('i'), mo('+'), mn('½'))), S.dx)), mo(','), space('1.2em'), eq(S.dx, row(S.Lh, mo('/'), S.N))), '4.2')}
 ${display(row(eq(S.zetai, row(S.zsi, mo('−'), S.zi)), mo(','), space('1.2em'), eq(S.d, row(mn('100'), mo('·'), S.zeta)), mo(','), space('1.2em'), eq(S.Di, row(S.zsi, mo('−'), S.zbase))), '4.3')}

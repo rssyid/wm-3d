@@ -14,6 +14,7 @@ import {
   line,
   textLine,
   nm,
+  nmp,
   plot,
   legendItem,
   note,
@@ -46,15 +47,14 @@ ${p(`Neraca ditutup untuk seluruh sistem: blok gambut (${fmt(g.Ablock / 10000, 1
 ${display(eq(dS, row(S.P, mo('−'), S.ET, mo('−'), sub(S.Q, mtext('buang')), mo('+'), sub(S.Q, mtext('balik')))), '1.1')}
 ${display(row(eq(mi('S'), row(sum(mi('i'), null, row(S.Wi, S.ai)), mo('+'), S.Vc)), mo(','), space('1.2em'), eq(S.ai, row(mn('2'), S.dx, S.Lb))), '1.2')}
 ${display(
-  eq(
-    mtext('residu'),
-    row(
-      paren(row(V('hujan,blok'), mo('+'), V('hujan,sal'), mo('+'), V('balik'), mo('+'), V('klem'))),
-      mo('−'),
-      paren(row(V('ET'), mo('+'), V('evap,sal'), mo('+'), V('buang'), mo('+'), V('batas'))),
-      mo('−'),
-      dS,
-    ),
+  row(
+    eq(mtext('masuk'), row(V('hujan,blok'), mo('+'), V('hujan,sal'), mo('+'), V('balik'), mo('+'), V('klem'))),
+    mo(','),
+    space('1.2em'),
+    eq(mtext('keluar'), row(V('ET'), mo('+'), V('evap,sal'), mo('+'), V('buang'), mo('+'), V('batas'))),
+    mo(','),
+    space('1.2em'),
+    eq(mtext('residu'), row(mtext('masuk'), mo('−'), mtext('keluar'), mo('−'), dS)),
   ),
   '1.3',
 )}
@@ -91,7 +91,7 @@ export function live(c) {
   ]);
 
   const lines = [];
-  lines.push(`<p class="eq-calc-sub">Kumulatif sejak awal skenario (hari ${fmt(c.snap.tDays, 2)})</p>`);
+  lines.push(`<p class="eq-calc-sub">Kumulatif sejak awal skenario (${fmt(c.snap.tDays, 2)} hari simulasi), mm atas A<sub>tot</sub></p>`);
   lines.push(
     line(
       mtext('masuk'),
@@ -110,15 +110,19 @@ export function live(c) {
   lines.push(line(mtext('residu'), row(nm(mm(b.in), 1), mo('−'), nm(mm(b.out), 1), mo('−'), paren(nm(mm(b.dS), 1))), `${fmtSci(mm(b.residual), 2)} mm`));
   lines.push(line(mi('ε'), null, fmtSci(b.relError, 2), { note: b.relError < 1e-9 ? 'neraca tertutup (&lt; 10⁻⁹)' : 'periksa neraca' }));
   const t = c.snap.today;
-  lines.push(`<p class="eq-calc-sub">${t.hours} jam terakhir (bergulir), mm atas A<sub>tot</sub></p>`);
-  lines.push(
-    line(
-      row(S.P, mo('−'), S.ET, mo('−'), sub(S.Q, mtext('bersih'))),
-      row(nm(t.rain_mm, 1), mo('−'), nm(t.et_mm, 1), mo('−'), nm(t.out_mm, 1)),
-      `${fmtSigned(t.dS_mm, 1)} mm`,
-      { note: `= ΔS (residu ${fmtSci(t.residual_mm, 1)} mm)` },
-    ),
-  );
+  if (t.hours > 0) {
+    lines.push(`<p class="eq-calc-sub">${t.hours} jam terakhir (jendela bergulir), mm atas A<sub>tot</sub></p>`);
+    lines.push(
+      line(
+        row(S.P, mo('−'), S.ET, mo('−'), sub(S.Q, mtext('bersih'))),
+        row(nm(t.rain_mm, 1), mo('−'), nm(t.et_mm, 1), mo('−'), nmp(t.out_mm, 1)),
+        `${fmtSigned(t.dS_mm, 1)} mm`,
+        { note: `= ΔS (residu ${fmtSci(t.residual_mm, 1)} mm)` },
+      ),
+    );
+  } else {
+    lines.push(textLine('Belum ada jam yang dihitung: jalankan simulasi (▶ atau +1 hari) untuk melihat neraca 24 jam terakhir.'));
+  }
   out['nr-calc'] = lines.join('');
 
   // tabel 14 hari
@@ -147,7 +151,7 @@ export function live(c) {
         caption: `TMAT = elevasi muka air relatif permukaan (−45 = 45 cm di bawah permukaan); PP dinilai dari rata-rata harian di titik penaatan ${esc(s.tpId)}`,
         label: 'Tabel neraca harian',
       })
-    : note('Belum ada data harian: jalankan simulasi (▶ atau ⏭ +1 hari).');
+    : note('Belum ada data harian: jalankan simulasi (▶ atau +1 hari).');
   return out;
 }
 
@@ -164,7 +168,7 @@ export function plots(c) {
   const xmax = x.length ? x.at(-1) + 0.5 : 1.5;
   return {
     'nr-daily': {
-      x: { min: xmin, max: xmax, label: 'hari simulasi', fmt: (v) => fmt(v, 0) },
+      x: { min: xmin, max: xmax, label: 'hari simulasi', integer: true, fmt: (v) => fmt(v, 0) },
       y: { min: lo, max: top, label: 'mm/hari' },
       bars: [{ x, y: rain, color: '--series-rain', w: 0.7, alpha: 0.75 }],
       series: [

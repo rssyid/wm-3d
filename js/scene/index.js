@@ -15,7 +15,7 @@ import { createPalms } from './palms.js';
 import { createInstruments } from './instruments.js';
 import { createGate } from './gate.js';
 import { createRain, createFlow } from './particles.js';
-import { createLabels } from './labels.js';
+import { createLabels, gateWarnCode, GATE_WARN, tpTagText } from './labels.js';
 import { createCameraRig, prefersReducedMotion } from './camera.js';
 import { setBoxCut } from './cutbox.js';
 
@@ -213,6 +213,12 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
     needsRender = true;
   }
   const mqDark = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : null;
+  const mqReduce = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  let reduceMotion = !!mqReduce?.matches;
+  const onReduce = () => {
+    reduceMotion = !!mqReduce?.matches;
+  };
+  mqReduce?.addEventListener?.('change', onReduce);
   mqDark?.addEventListener?.('change', applyTheme);
   const themeObserver = typeof MutationObserver === 'function' ? new MutationObserver(applyTheme) : null;
   themeObserver?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
@@ -293,7 +299,7 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
 
   // ---------- pembaruan dari snapshot ----------
   // kunci numerik (tanpa membuat string tiap frame); teks hanya diformat & ditulis bila berubah
-  const LS = { pzD: new Float64Array(8).fill(NaN), pzCls: [], pzTp: new Int8Array(8).fill(-1), tmas: NaN, gN: -1, gQ: NaN, gMode: '', gWarn: -1, river: NaN, dCrest: NaN, dHead: NaN, wt: false };
+  const LS = { pzD: new Float64Array(8).fill(NaN), pzCls: [], pzTp: new Int8Array(8).fill(-1), tmas: NaN, gN: -1, gQ: NaN, gMode: '', gWarn: -1, river: NaN, dCrest: NaN, dHead: NaN, tmasD: NaN, wt: false };
   function updateLabels(view) {
     const pzs = view.piezometers;
     for (let i = 0; i < L.pz.length && i < pzs.length; i++) {
@@ -313,8 +319,9 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
         () => {
           const sw = labels.span(`sc-sw st-${p.cls.id}`, p.cls.icon);
           sw.setAttribute('aria-hidden', 'true');
-          const parts = [sw, labels.span('sc-txt', txt)];
-          if (p.isTP) parts.push(labels.span(`sc-tag ${p.ppCompliant ? 'is-ok' : 'is-bad'}`, p.ppCompliant ? 'TP ✓ PP' : 'TP ✗ PP'));
+          // nama kategori: selalu di titik penaatan (berdampingan dengan tag PP), piezometer lain hanya di layar lebar
+          const parts = [sw, labels.span('sc-txt', txt), labels.span(`sc-cat${p.isTP ? ' is-tp' : ''}`, p.cls.label)];
+          if (p.isTP) parts.push(labels.span(`sc-tag ${p.ppCompliant ? 'is-ok' : 'is-bad'}`, tpTagText(p.ppCompliant)));
           return parts;
         },
         aria,
@@ -329,14 +336,14 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
     }
     const st = view.structure;
     const q = Math.round(st.q_m3s * 1e4);
-    const warnCode = st.q_m3s < -1e-5 ? 2 : st.riverAboveCrest ? 1 : 0;
+    const warnCode = gateWarnCode(st, view.river.levelM, view.canal.levelM);
     if (LS.gN !== st.nLogs || LS.gQ !== q || LS.gMode !== st.mode || LS.gWarn !== warnCode) {
       LS.gN = st.nLogs;
       LS.gQ = q;
       LS.gMode = st.mode;
       LS.gWarn = warnCode;
       const qs = fmtQ(st.q_m3s);
-      const warn = warnCode === 2 ? 'Aliran balik ke kanal' : warnCode === 1 ? 'Air balik' : '';
+      const warn = GATE_WARN[warnCode];
       const mode = st.mode === 'auto' ? 'OTOMATIS' : 'MANUAL';
       labels.setContent(
         L.gate,
@@ -346,7 +353,7 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
           if (warn) parts.push(labels.span('sc-warn', `⚠ ${warn}`));
           return parts;
         },
-        `Pintu air: ${st.nLogs} stoplog, debit ${qs}, mode ${mode.toLowerCase()}${warn ? `, peringatan: ${warn}` : ''}`,
+        `Pintu air: ${st.nLogs} stoplog, debit ${qs}, mode ${mode.toLowerCase()}${warn ? `, peringatan: ${warn.toLowerCase()}` : ''}`,
       );
     }
     const r = Math.round(view.river.levelM * 1000);
@@ -531,7 +538,9 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
         dirty = true;
       }
       if (rig.update(now)) dirty = true;
-      if (gate.animate(dtSec, now, playing)) dirty = true;
+      // gerak dikurangi: garis hujan, partikel aliran, dan gulir nappe diam (tetap tampil sebagai penanda)
+      const moving = playing && !reduceMotion;
+      if (gate.animate(dtSec, now, moving)) dirty = true;
       // mendung dihaluskan (τ 0,6 s, waktu nyata)
       const wall = Math.min(1, Math.max(0, (now - lastCloudMs) / 1000));
       lastCloudMs = now;
@@ -545,7 +554,7 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
         }
       }
       if (playing) {
-        if (opts.particles) {
+        if (opts.particles && moving) {
           rain.tick(dtSec);
           world.flow.tick(dtSec);
         }
@@ -644,6 +653,8 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
         camera: camera.position.toArray(),
         target: rig.controls.target.toArray(),
         rain: rain.count,
+        rainTime: rain.time,
+        reduceMotion,
         cloud,
         shadows: sun.castShadow,
         pond: !!world.water.pond?.visible,
@@ -669,6 +680,7 @@ export function createScene(container, { params, options = {}, onPick } = {}) {
       ro?.disconnect();
       themeObserver?.disconnect();
       mqDark?.removeEventListener?.('change', applyTheme);
+      mqReduce?.removeEventListener?.('change', onReduce);
       rig.dispose();
       disposeWorld();
       gate.dispose();

@@ -59,12 +59,20 @@ test('pintu-air lewat hash: MathML, Q = snapshot, berubah tiap langkah, dan bisa
   });
   const q20 = await expectedQ(page);
   await waitWeirQ(page, q20);
-  // silang-cek dengan KPI (milik modul UI; diperbarui per frame) — dicatat, tidak menggagalkan tes ini
-  const kpiOk = await page
-    .waitForFunction((exp) => (document.querySelector('[data-kpi="q"]')?.textContent ?? '').includes(exp), q20, { timeout: 5000 })
-    .then(() => true)
-    .catch(() => false);
-  t.diagnostic(kpiOk ? `KPI [data-kpi="q"] memuat ${q20}` : `Catatan: KPI [data-kpi="q"] belum memuat ${q20} (modul UI tidak memperbarui KPI selama tab Simulasi tersembunyi)`);
+  // silang-cek dengan KPI di tab Simulasi 3D (KPI hanya diperbarui saat tab itu tampil): teks harus identik
+  const eqText = await page.locator('[data-eq-value="weir-q"]').textContent();
+  assert.equal(eqText, q20);
+  await page.evaluate(() => {
+    location.hash = '#sim';
+  });
+  await page.waitForSelector('#view-sim:not([hidden])', { timeout: 10000 });
+  await page.waitForFunction((exp) => (document.querySelector('[data-kpi="q"]')?.textContent ?? '').includes(exp), eqText, { timeout: 8000 });
+  t.diagnostic(`KPI [data-kpi="q"] memuat ${eqText}`);
+  await page.evaluate(() => {
+    location.hash = '#persamaan.pintu-air';
+  });
+  await sectionVisible(page, 'pintu-air');
+  await waitWeirQ(page, q20);
 
   // satu hari lagi → angka mengikuti snapshot baru
   const cond0 = await page.locator('#eq-cond').textContent();
@@ -201,8 +209,17 @@ test('ponsel 390×844: sub-menu <select>, tanpa scroll horizontal halaman di sem
     await page.selectOption('#eq-nav-select', id);
     await sectionVisible(page, id);
     await page.waitForTimeout(150);
-    const w = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+    const w = await page.evaluate((s) => {
+      const cw = document.documentElement.clientWidth;
+      const sec = document.querySelector(`[data-eq-section="${s}"]`);
+      // keterangan tabel & teks perhitungan tidak boleh terpotong (lebih lebar dari layar)
+      const clipped = [...sec.querySelectorAll('.eq-table-cap, .eq-calc-sub, .eq-line-text')].filter((n) => n.getBoundingClientRect().right > cw + 1).length;
+      const upper = [...sec.querySelectorAll('.eq-table-cap, .eq-calc-sub')].filter((n) => getComputedStyle(n).textTransform === 'uppercase').length;
+      return { sw: document.documentElement.scrollWidth, cw, clipped, upper };
+    }, id);
     assert.ok(w.sw <= w.cw, `${id}: tanpa scroll horizontal (${w.sw} > ${w.cw})`);
+    assert.equal(w.clipped, 0, `${id}: keterangan/teks tidak terpotong`);
+    assert.equal(w.upper, 0, `${id}: keterangan tidak dikapitalkan (satuan mm, A_tot tetap benar)`);
   }
   await page.selectOption('#eq-nav-select', 'pintu-air');
   await sectionVisible(page, 'pintu-air');

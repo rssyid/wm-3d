@@ -1,6 +1,6 @@
 // Bilah simulasi (atas), panel kontrol kiri, dan pintasan keyboard.
 // Semua kontrol hanya menulis ke store / memanggil actions; main.js yang menerapkan ke model & scene.
-import { crestLevel } from '../model/index.js';
+import { crestLevel, safeMaxLogs } from '../model/index.js';
 import { fmt, fmtDay, fmtElevCm } from './format.js';
 import { S, MONTHS_LONG } from './strings.id.js';
 import { esc, textSlot } from './dom.js';
@@ -156,7 +156,7 @@ export function createControls({ store, actions, meta, simBar, left }) {
       <div class="ctl-field">
         <label for="gate-target" class="ctl-label">${L.target}</label>
         <select id="gate-target">${targetOpts}</select>
-        <p class="ctl-hint" id="target-hint">${L.targetHint}</p>
+        <p class="ctl-hint" id="target-hint"><span data-f="band"></span> <span data-f="only-auto">${L.targetHint}</span></p>
       </div>
     </fieldset>
 
@@ -231,7 +231,15 @@ export function createControls({ store, actions, meta, simBar, left }) {
   const stoplogCrest = textSlot(q('#stoplog-crest'));
   const stackBars = [...q('.stoplog-stack').children];
   const autoNote = q('#auto-note');
-  const targetHint = q('#target-hint');
+  const targetBand = textSlot(q('#target-hint [data-f="band"]'));
+  const targetOnlyAuto = q('#target-hint [data-f="only-auto"]');
+  /** Teks pita target: pita perusahaan [45,60] = kategori Normal 46–60 cm (bilangan bulat). */
+  const bandText = (id) => {
+    const t = meta.controlTargets?.[id];
+    if (!t) return '';
+    const lo = id === 'perusahaan' ? t.band[0] + 1 : t.band[0];
+    return L.targetBand(fmt(lo, 0), fmt(t.band[1], 0), safeMaxLogs(meta.weir ?? { zSill: -2, plank: 0.2, nMax }, 0, id));
+  };
 
   const fmtOut = {
     rainScale: (v) => `×${fmt(v, 2)}`,
@@ -338,7 +346,8 @@ export function createControls({ store, actions, meta, simBar, left }) {
     autoNote.hidden = g.mode !== 'auto';
     setChecked(inputs.flap, g.flapGate);
     setVal(inputs.target, g.target);
-    targetHint.hidden = g.mode === 'auto';
+    targetBand.set(bandText(g.target));
+    targetOnlyAuto.hidden = g.mode === 'auto';
 
     // lahan
     const land = s.land;

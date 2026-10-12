@@ -193,6 +193,13 @@ test('preset kamera: target y diskalakan VE, jarak bertambah di viewport sempit'
   const top = presetPose('atas', 10, 1.6, true);
   assert.ok(top.target[2] < -80, 'pandangan atas berpusat di setengah blok yang tersisa saat cutaway');
   assert.ok(presetPose('atas', 10, 1.6, false).target[2] > -40);
+  // pandangan atas (cutaway): baris piezometer (Z = 0,6) dan pintu air (Z = −225) sama-sama masuk bingkai
+  for (const aspect of [1.6, 0.96]) {
+    const t = presetPose('atas', 10, aspect, true);
+    const halfZ = (t.pos[1] - t.target[1]) * Math.tan(((t.fov / 2) * Math.PI) / 180);
+    assert.ok(t.target[2] + halfZ > 0.6 + 40, `piezometer dalam bingkai (aspek ${aspect})`);
+    assert.ok(t.target[2] - halfZ < -225 - 25, `pintu air dalam bingkai (aspek ${aspect})`);
+  }
   const narrow = presetPose('penampang', 10, 0.8);
   assert.ok(narrow.pos[2] > a.pos[2] * 1.3, 'mundur pada layar ponsel');
   const ik = presetPose('ikhtisar', 10, 1.6);

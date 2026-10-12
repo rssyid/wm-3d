@@ -132,6 +132,13 @@
   box-shadow: inset 0 0 0 1px var(--st-outline), 0 0 0 1px rgba(255, 255, 255, 0.85);
 }
 
+.sc-cat {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .sc-tag {
   padding: 0 4px;
   border-radius: 3px;
@@ -147,8 +154,9 @@
 }
 
 .sc-tag.is-bad {
-  background: #ff1a1a;
-  color: #ffffff;
+  background: var(--bad-soft);
+  color: var(--bad);
+  box-shadow: inset 0 0 0 1px var(--bad);
 }
 
 .sc-gate .sc-label {
@@ -204,6 +212,12 @@
 .sc-river .sc-label {
   color: var(--muted);
   font-size: 10.5px;
+}
+
+@container sclabels (max-width: 819px) {
+  .sc-cat:not(.is-tp) {
+    display: none;
+  }
 }
 
 @container sclabels (max-width: 520px) {

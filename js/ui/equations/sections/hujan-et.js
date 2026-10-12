@@ -7,6 +7,7 @@ import {
   SYM as S,
   esc,
   fmt,
+  fmtSigned,
   display,
   symTable,
   calcBox,
@@ -45,7 +46,7 @@ ${display(row(eq(Pr(wet(mi('j')), dry(jm1)), sub(mi('p'), mn('01'))), mo(','), s
 ${display(eq(Rj, fn('min', [row(mi('μ'), mo('·'), sup(paren(row(mo('−'), up('ln'), paren(row(mn('1'), mo('−'), sub(mi('u'), mn('2')))))), mn('1,5'))), row(mn(String(DAILY_CAP_MM)), unit('mm'))], ';')), '2.2')}
 ${p(`Rantai Markov orde-1 (2.1) membuat hari hujan cenderung berurutan (${im(sub(mi('p'), mn('11')))} > ${im(sub(mi('p'), mn('01')))}). Jumlah hujan hari basah (2.2) mengikuti sebaran Weibull dengan parameter bentuk 1/1,5 ≈ 0,67 dan skala ${im(mi('μ'))} = ${RAIN_MU_MM} mm, sehingga hari hujan lebat lebih sering muncul dibanding sebaran eksponensial.`)}
 ${display(row(Rj, mo('←'), Rj, mo('·'), frac(row(sub(mi('R'), mtext('bln')), mo('·'), mi('n'), mo('/'), sub(mi('n'), mtext('bln'))), sum(row(mi('j'), mo('∈'), mtext('bln')), null, Rj))), '2.3')}
-${p(`Setelah itu jumlah hujan setiap bulan kalender diskalakan (2.3) agar <strong>tepat sama</strong> dengan target bulanan skenario ${im(sub(mi('R'), mtext('bln')))} (diprorata bila bulan hanya terpakai ${im(mi('n'))} dari ${im(sub(mi('n'), mtext('bln')))} hari). Hari yang melebihi ${DAILY_CAP_MM} mm dipotong dan kelebihannya disebar proporsional ke hari basah lain. Badai rancangan skenario Ekstrem (110/170/70 mm) dipasang sesudah penskalaan.`)}
+${p(`Setelah itu jumlah hujan setiap bulan kalender diskalakan (2.3) agar <strong>tepat sama</strong> dengan target bulanan skenario ${im(sub(mi('R'), mtext('bln')))} (diprorata bila bulan hanya terpakai ${im(mi('n'))} dari ${im(sub(mi('n'), mtext('bln')))} hari). Hari yang melebihi ${DAILY_CAP_MM} mm dipotong dan kelebihannya disebar proporsional ke hari basah lain. Badai rancangan skenario Ekstrem (${(SCENARIOS.ekstrem?.storms ?? []).map((st) => st.mm).join('/')} mm) dipasang sesudah penskalaan.`)}
 ${h3('Disagregasi ke per jam')}
 ${display(
   eq(
@@ -199,12 +200,12 @@ export function live(c) {
       `${Math.min(...mon) === Math.max(...mon) ? Math.min(...mon) : `${Math.min(...mon)}–${Math.max(...mon)}`}${storms}`,
       etp,
       fmt(sc.zR0, 1),
-      fmt(sc.init.tmatCm, 0),
+      fmtSigned(-sc.init.tmatCm, 0),
       String(sc.init.nLogs),
     ];
   });
   out['he-scen'] =
-    table(['Skenario', 'Periode', 'Seed', 'p₀₁', 'p₁₁', 'Target hujan (mm/bln)', 'ETp (mm/hari)', 'z_R0 (m)', 'TMAT awal (cm)', 'Stoplog awal'], rows, {
+    table(['Skenario', 'Periode', 'Seed', 'p₀₁', 'p₁₁', 'Target hujan (mm/bln)', 'ETp (mm/hari)', 'z<sub>R0</sub> sungai (m)', 'TMAT awal (cm)', 'Stoplog awal'], rows, {
       num: [2, 3, 4, 6, 7, 8, 9],
       cls: 'eq-compact',
       rowAttrs: (i) => (SCENARIO_IDS[i] === c.snap.scenarioId ? ' class="eq-row-current"' : ''),
@@ -217,9 +218,10 @@ export function live(c) {
 
 export function plots(c) {
   const cv = c.curvesFull;
+  const pzById = Object.fromEntries(c.snap.piezometers.map((q) => [q.id, q]));
   const pts = c.ids.map((pid) => {
     const k = c.ex[pid].cell;
-    const cls = classifyTmat(100 * k.zeta);
+    const cls = pzById[pid]?.cls ?? classifyTmat(100 * k.zeta);
     return { x: k.beta, y: k.zeta, color: cls.color, r: pid === c.pz ? 6 : 4.5, ring: pid === c.pz, label: pid };
   });
   const f = c.forcing;

@@ -5,13 +5,35 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 
 const _v = new THREE.Vector3();
 
+/** Peringatan pintu air (teks label; istilah sama dengan KPI): 0 tidak ada, 1 terendam, 2 aliran balik, 3 klep menutup. */
+export const GATE_WARN = Object.freeze(['', 'Terendam', 'Aliran balik ke saluran', 'Klep menutup']);
+
+/**
+ * Kode peringatan pintu air dari snapshot `structure` dan muka air sungai/saluran (m).
+ * Aliran balik (Q < 0) didahulukan; klep menutup bila pintu klep aktif dan sungai di atas saluran (Q ≈ 0);
+ * terendam bila muka air hilir di atas mercu sementara air masih keluar (aliran diperlambat, Villemonte).
+ */
+export function gateWarnCode(st, riverM, canalM) {
+  if (st.q_m3s < -1e-5) return 2;
+  if (st.flapGate && riverM > canalM && riverM > st.crestM) return 3;
+  if (st.submerged || st.riverAboveCrest) return 1;
+  return 0;
+}
+
+/** Teks tag kepatuhan PP 57/2016 di label piezometer titik penaatan (TP). */
+export function tpTagText(ok) {
+  return ok ? 'TP · PP ✓ patuh' : 'TP · PP ✗ tidak patuh';
+}
+
 /**
  * Penempatan rakus (murni). items: {x, y, w, h, fixed, base, priority, visible} (px layar).
- * Label 'pin' dicoba dulu di ketinggian dasar dengan geseran horizontal kecil (≤ 0,4·lebar, garis penunjuk tetap
- * menyentuh label); bila masih bertabrakan, label dinaikkan. Label tetap ('zone') yang bertabrakan disembunyikan.
+ * Bila `width` diberikan, label 'pin' lebih dulu digeser ke dalam viewport (≤ ½·lebar − 6 px, garis penunjuk tetap
+ * menyentuh label) — sebelum uji tabrakan, supaya penjepitan tidak membuat label kembali bertumpuk.
+ * Label 'pin' lalu dicoba di ketinggian dasar dengan geseran horizontal kecil (≤ 0,4·lebar); bila masih bertabrakan,
+ * label dinaikkan. Label tetap ('zone') yang bertabrakan disembunyikan.
  * Kembalian: offset vertikal per label (−1 = sembunyikan); geseran horizontal di `declutter.dx` (larik paralel).
  */
-export function declutter(items, gap = 3, maxIter = 10) {
+export function declutter(items, gap = 3, maxIter = 10, width = 0, margin = 4) {
   const placed = [];
   const out = new Array(items.length).fill(0);
   const dxs = new Array(items.length).fill(0);
@@ -20,6 +42,16 @@ export function declutter(items, gap = 3, maxIter = 10) {
     for (const p of placed) if (l < p.r + gap && r > p.l - gap && t < p.b + gap && b > p.t - gap) return p;
     return null;
   };
+  const lim = (it) => Math.max(0, it.w / 2 - 6);
+  /** Geseran agar [x − w/2, x + w/2] di dalam [margin, width − margin], dibatasi ±(w/2 − 6). */
+  const clampDx = (it, d) => {
+    if (!(width > 0)) return d;
+    const x = it.x + d;
+    if (x - it.w / 2 < margin) d += margin - (x - it.w / 2);
+    else if (x + it.w / 2 > width - margin) d += width - margin - (x + it.w / 2);
+    return Math.max(-lim(it), Math.min(lim(it), d));
+  };
+  const inside = (it, d) => !(width > 0) || (it.x + d - it.w / 2 >= margin - 0.5 && it.x + d + it.w / 2 <= width - margin + 0.5);
   for (const i of order) {
     const it = items[i];
     if (!it.visible) continue;
@@ -32,16 +64,21 @@ export function declutter(items, gap = 3, maxIter = 10) {
       placed.push(rect);
       continue;
     }
+    const dx0 = clampDx(it, 0);
     const maxShift = 0.4 * it.w;
     let off = it.base;
-    let dx = 0;
+    let dx = dx0;
     const b0 = it.y - off;
-    const first = hitAt(it.x - it.w / 2, it.x + it.w / 2, b0 - it.h, b0);
+    const x0 = it.x + dx0;
+    const first = hitAt(x0 - it.w / 2, x0 + it.w / 2, b0 - it.h, b0);
     if (first) {
-      // coba geser kanan/kiri secukupnya pada ketinggian dasar
-      const right = first.r + gap - (it.x - it.w / 2) + 1;
-      const left = first.l - gap - (it.x + it.w / 2) - 1;
-      const cands = [right, left].filter((d) => Math.abs(d) <= maxShift).sort((p, q) => Math.abs(p) - Math.abs(q));
+      // coba geser kanan/kiri secukupnya pada ketinggian dasar (tetap di dalam viewport & dekat jangkar)
+      const right = first.r + gap - (x0 - it.w / 2) + 1;
+      const left = first.l - gap - (x0 + it.w / 2) - 1;
+      const cands = [right, left]
+        .map((d) => dx0 + d)
+        .filter((d) => Math.abs(d) <= Math.max(maxShift, Math.abs(dx0)) && Math.abs(d) <= lim(it) + 0.5 && inside(it, d))
+        .sort((p, q) => Math.abs(p - dx0) - Math.abs(q - dx0));
       let ok = false;
       for (const d of cands) {
         if (!hitAt(it.x + d - it.w / 2, it.x + d + it.w / 2, b0 - it.h, b0)) {
@@ -53,7 +90,7 @@ export function declutter(items, gap = 3, maxIter = 10) {
       if (!ok) {
         for (let k = 0; k < maxIter; k++) {
           const b = it.y - off;
-          const hit = hitAt(it.x - it.w / 2, it.x + it.w / 2, b - it.h, b);
+          const hit = hitAt(x0 - it.w / 2, x0 + it.w / 2, b - it.h, b);
           if (!hit) break;
           off = it.y - hit.t + gap;
         }
@@ -70,7 +107,8 @@ export function declutter(items, gap = 3, maxIter = 10) {
 export function createLabels(container, { onPick } = {}) {
   const css = new CSS2DRenderer();
   css.domElement.className = 'sc-labels';
-  css.domElement.setAttribute('aria-label', 'Label objek 3D');
+  css.domElement.setAttribute('role', 'group');
+  css.domElement.setAttribute('aria-label', 'Label objek 3D (klik untuk rincian)');
   container.appendChild(css.domElement);
   const root = new THREE.Group();
   root.name = 'label';
@@ -176,7 +214,7 @@ export function createLabels(container, { onPick } = {}) {
     }
     if (sig === lastSig) return; // kamera & label tidak berubah → tata letak tetap
     lastSig = sig;
-    const offs = declutter(layoutBuf);
+    const offs = declutter(layoutBuf, 3, 10, width);
     const shifts = declutter.dx;
     items.forEach((it, i) => {
       const col = offs[i] === -1;
@@ -184,10 +222,10 @@ export function createLabels(container, { onPick } = {}) {
         it.col = col;
         it.anchor.classList.toggle('is-collide', col);
       }
-      // geser tombol ke dalam viewport (garis penunjuk tetap di jangkar)
+      // label 'pin' sudah dijepit ke viewport oleh declutter; label zona digeser ke dalam di sini
       const b = layoutBuf[i];
-      let dx = shifts[i] || 0;
-      if (b.visible && b.w > 0) {
+      let dx = Math.round(shifts[i] || 0);
+      if (b.fixed && b.visible && b.w > 0) {
         const m = 4;
         const x = b.x + dx;
         if (x - b.w / 2 < m) dx += m - (x - b.w / 2);
@@ -222,6 +260,8 @@ export function createLabels(container, { onPick } = {}) {
     },
     setSize(w, h) {
       css.setSize(w, h);
+      // lebar tombol bisa berubah lewat container query (mis. nama kategori disembunyikan) → ukur ulang
+      for (const it of items) it.wDirty = true;
     },
     render(scene, camera, width, height, occluded) {
       if (!enabled) return;

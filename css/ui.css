@@ -192,8 +192,8 @@
   color: var(--muted);
 }
 
-.ctl-group > legend + * {
-  clear: both;
+.ctl-group > legend ~ * {
+  clear: both; /* juga bila saudara pertama tersembunyi (mis. grup Hujan di mode Manual) */
 }
 
 .sc-card {
@@ -554,31 +554,6 @@
   height: 12px;
 }
 
-.badge-stats {
-  margin: 4px 0 0;
-  display: grid;
-  gap: 1px;
-  font-size: 0.6875rem;
-  color: var(--muted);
-}
-
-.badge-stats div {
-  display: flex;
-  justify-content: space-between;
-  gap: 4px;
-}
-
-.badge-stats dt {
-  min-width: 0;
-}
-
-.badge-stats dd {
-  margin: 0;
-  font-family: var(--font-data);
-  color: var(--ink);
-  white-space: nowrap;
-}
-
 .tension {
   display: flex;
   gap: var(--sp-2);
@@ -594,6 +569,53 @@
 .tension-ico {
   color: var(--warn);
   padding-top: 1px;
+}
+
+.tension[data-tone="info"] {
+  background: var(--surface-2);
+  border-color: var(--st-tergenang);
+}
+
+.tension[data-tone="info"] .tension-ico {
+  color: var(--st-tergenang);
+}
+
+.badge-pp .badge-foot {
+  font-family: var(--font-body);
+}
+
+.pp-strip {
+  margin: var(--sp-2) 0 0;
+  display: grid;
+  gap: 2px;
+  font-size: var(--fs-xs);
+}
+
+.pp-strip div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.pp-strip dt {
+  color: var(--muted);
+  min-width: 0;
+}
+
+.pp-strip dd {
+  margin: 0;
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.badge-basis {
+  margin: 3px 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--muted);
 }
 
 .st-ico {
@@ -624,9 +646,10 @@
 
 .kpi-head {
   display: flex;
+  flex-wrap: wrap; /* tag pindah ke baris berikut, bukan memotong subjudul */
   align-items: center;
   justify-content: space-between;
-  gap: var(--sp-2);
+  gap: 2px var(--sp-2);
 }
 
 .kpi-title {
@@ -994,6 +1017,12 @@
 @media (prefers-reduced-motion: reduce) {
   .flow-dash {
     animation: none !important;
+  }
+
+  .flow-shaft,
+  .meter span,
+  .ui-btn {
+    transition: none !important;
   }
 }
 
@@ -1695,10 +1724,15 @@ span.tip-v {
   }
 }
 
-@container vp (max-width: 560px) {
+@container vp (max-width: 440px) {
+  /* viewport sempit: cap naik di atas ringkasan legenda (pojok kanan bawah), tidak menutupi label 3D di atas;
+     disembunyikan selama legenda dibuka */
   .vp-stamp {
-    top: 52px;
-    bottom: auto;
+    bottom: 52px;
+  }
+
+  .vp-legend[open] ~ .vp-stamp {
+    display: none;
   }
 }
 
@@ -1838,8 +1872,6 @@ span.tip-v {
 
   .vp-stamp {
     right: var(--sp-2);
-    top: 52px;
-    bottom: auto;
     font-size: 0.625rem;
   }
 

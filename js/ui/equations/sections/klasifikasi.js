@@ -143,8 +143,10 @@ export function live(c) {
     }),
   );
   L.push(line(mtext('hari patuh'), pp.daysCounted ? row(mn(String(pp.compliantDays)), mo('/'), mn(String(pp.daysCounted))) : null, Number.isFinite(pp.pctDays) ? `${fmt(pp.pctDays, 0)}%` : '—', { note: `rentetan tidak patuh sekarang ${pp.streak} hari, terpanjang ${pp.longestStreak} hari` }));
-  if (tpCls.id === 'normal' && !pp.now) {
-    L.push(`<p class="eq-calc-foot eq-tone-bad">Sekarang: kategori perusahaan "Normal" tetapi TIDAK patuh PP — contoh nyata ketegangan dua ukuran.</p>`);
+  if ((tpCls.id === 'normal' || tpCls.id === 'agak-tergenang') && !pp.now) {
+    L.push(`<p class="eq-calc-foot eq-tone-bad">Sekarang: kategori perusahaan "${esc(tpCls.label)}" tetapi TIDAK patuh PP — contoh nyata ketegangan dua ukuran.</p>`);
+  } else if ((tpCls.id === 'tergenang' || tpCls.id === 'banjir') && pp.now) {
+    L.push(`<p class="eq-calc-foot">Sekarang: patuh PP, tetapi menurut kategori perusahaan "${esc(tpCls.label)}" (terlalu basah bagi tanaman).</p>`);
   }
   L.push(textLine(`Rata-rata empat piezometer: ${fmt(ind.meanDepthCm, 1)} cm → ${stBadge(ind.meanCls)}`));
   out['kl-now'] = L.join('');
@@ -181,6 +183,11 @@ export function live(c) {
 export function plots(c) {
   const prof = c.snap.profile;
   const x = Array.from(prof.x);
+  // label pita kategori di celah terlebar antar-piezometer (agar tidak menimpa titik)
+  const xs = [0, ...c.snap.piezometers.map((q) => q.x).sort((a, b) => a - b), prof.Lh];
+  let gap = [0, 0];
+  for (let j = 1; j < xs.length; j++) if (xs[j] - xs[j - 1] > gap[1] - gap[0]) gap = [xs[j - 1], xs[j]];
+  const xLab = (gap[0] + gap[1]) / 2;
   const d = Array.from(prof.depthCm);
   const yMin = Math.min(-10, ...d) - 5;
   const yMax = Math.max(90, ...d) + 5;
@@ -201,15 +208,12 @@ export function plots(c) {
         { y: 0, color: '--series-muted', label: 'permukaan', align: 'left', below: true },
       ],
       points: c.snap.piezometers.map((q) => ({ x: q.x, y: q.depthCm, color: q.cls.color, r: q.isTP ? 6.5 : 5, ring: q.isTP, label: `${q.id}${q.isTP ? ' (TP)' : ''}` })),
-      texts: TMAT_CLASSES.filter((k) => !Number.isFinite(k.max) || k.max <= yMax).map((k) => ({
-        x: prof.Lh,
-        y: Number.isFinite(k.max) ? k.max : yMax,
-        text: k.label,
-        align: 'right',
-        base: 'bottom',
-        dx: -4,
-        dy: -2,
-      })),
+      // label di tengah pita (pita tipis 5 cm tetap terbaca karena tinggi teks ≈ tinggi pita)
+      texts: TMAT_CLASSES.map((k) => {
+        const y0 = Math.max(Number.isFinite(k.min) ? k.min : yMin, yMin);
+        const y1 = Math.min(Number.isFinite(k.max) ? k.max : yMax, yMax);
+        return { x: xLab, y: (y0 + y1) / 2, text: k.label, align: 'center', base: 'middle' };
+      }).filter((t) => t.y > yMin && t.y < yMax),
     },
   };
 }

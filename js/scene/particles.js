@@ -80,6 +80,10 @@ vec3 transformed = head - rdir * aEnd * uLen;`,
     get count() {
       return n;
     },
+    /** Waktu animasi (detik) — untuk tes gerak dikurangi. */
+    get time() {
+      return uniforms.uTime.value;
+    },
     dispose() {
       geo.dispose();
       mat.dispose();

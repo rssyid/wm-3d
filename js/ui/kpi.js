@@ -21,12 +21,22 @@ export function flowDirection(st) {
   return { id: 'none', label: st.flapGate && st.riverAboveCrest ? S.kpi.flapShut : S.kpi.noFlow };
 }
 
-/** Catatan khusus: kategori perusahaan dianggap baik (Normal / Agak Tergenang) tetapi tidak patuh PP. */
+/** Catatan khusus: kategori perusahaan dianggap baik/agak basah (Normal / Agak Tergenang) tetapi tidak patuh PP. */
 export function tensionNote(cls, ppOk) {
   if (ppOk) return null;
-  if (cls?.id !== 'normal' && cls?.id !== 'agak-tergenang') return null;
-  return S.badge.tension(cls.label, cls.range);
+  if (cls?.id === 'normal') return S.badge.tension(cls.label, cls.range);
+  if (cls?.id === 'agak-tergenang') return S.badge.tensionWet(cls.label, cls.range);
+  return null;
 }
+
+/** Kebalikannya: patuh PP, tetapi menurut perusahaan terlalu basah (Tergenang / Banjir). */
+export function wetNote(cls, ppOk) {
+  if (!ppOk) return null;
+  if (cls?.id !== 'tergenang' && cls?.id !== 'banjir') return null;
+  return S.badge.wetNote(cls.label, cls.range);
+}
+
+const capFirst = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 function chip(cls) {
   return `<span class="st st-${esc(cls.id)}" data-st="${esc(cls.id)}"><span class="st-ico" aria-hidden="true">${esc(cls.icon)}</span><span class="st-lbl">${esc(cls.label)}</span></span>`;
@@ -53,13 +63,15 @@ export function createKpi(root, { meta, actions }) {
           <p class="badge-label">${B.pp}</p>
           <p class="badge-sub">${B.ppSub}</p>
           <p class="badge-value pp-value"><span class="pp-ico" data-f="pp-ico">${ICONS.check}</span><span data-f="pp-lbl">${B.ok}</span></p>
-          <dl class="badge-stats">
-            <div><dt>${B.pctDays}</dt><dd data-f="pp-pct"></dd></div>
-            <div><dt>${B.longest}</dt><dd data-f="pp-streak"></dd></div>
-          </dl>
+          <p class="badge-foot" data-f="pp-foot"></p>
         </div>
       </div>
-      <p class="tension" data-f="tension" hidden><span class="tension-ico">${ICONS.alert}</span><span data-f="tension-txt"></span></p>
+      <dl class="pp-strip">
+        <div><dt>${B.pctDays}</dt><dd data-f="pp-pct"></dd></div>
+        <div><dt>${B.longest}</dt><dd data-f="pp-streak"></dd></div>
+      </dl>
+      <p class="badge-basis">${B.basis}</p>
+      <p class="tension" data-f="tension" hidden><span class="tension-ico" data-f="tension-ico">${ICONS.alert}</span><span data-f="tension-txt"></span></p>
     </section>
 
     <section class="rp-section rp-kpis" aria-label="Indikator utama">
@@ -131,6 +143,8 @@ export function createKpi(root, { meta, actions }) {
     ppIco: f('pp-ico'),
     ppLbl: T('pp-lbl'),
     ppPct: T('pp-pct'),
+    ppFoot: T('pp-foot'),
+    tensionIco: f('tension-ico'),
     ppStreak: T('pp-streak'),
     tension: f('tension'),
     tensionTxt: T('tension-txt'),
@@ -257,11 +271,20 @@ export function createKpi(root, { meta, actions }) {
       el.ppIco.innerHTML = ok ? ICONS.check : ICONS.cross;
       el.ppLbl.set(ok ? B.ok : B.bad);
     }
-    el.ppPct.set(ind.pp.daysCounted ? fmtPct(ind.pp.pctDays) : B.noDays);
+    el.ppPct.set(ind.pp.daysCounted ? B.pctValue(fmtPct(ind.pp.pctDays), fmt(ind.pp.compliantDays, 0), fmt(ind.pp.daysCounted, 0)) : B.noDays);
     el.ppStreak.set(B.days(fmt(ind.pp.longestStreak, 0)));
-    const note = tensionNote(ind.cls, ok);
+    el.ppFoot.set(Number.isFinite(ind.pp.lastDayMeanCm) ? B.lastDay(fmtElevCm(ind.pp.lastDayMeanCm).replace(' ', '\u00a0')) : `${fmtElevCm(ind.tpDepthCm)} · batas ${fmtElevCm(ind.pp.limitCm ?? 40)}`);
+    const warn = tensionNote(ind.cls, ok);
+    const note = warn ?? wetNote(ind.cls, ok);
     if (el.tension.hidden !== !note) el.tension.hidden = !note;
-    if (note) el.tensionTxt.set(note);
+    if (note) {
+      el.tensionTxt.set(note);
+      const tone = warn ? 'warn' : 'info';
+      if (el.tension.dataset.tone !== tone) {
+        el.tension.dataset.tone = tone;
+        el.tensionIco.innerHTML = warn ? ICONS.alert : ICONS.info;
+      }
+    }
 
     // risiko kebakaran & subsidensi
     const fire = ind.fire;
@@ -327,7 +350,7 @@ export function createKpi(root, { meta, actions }) {
       who.textContent = e.auto ? X.auto : X.manual;
       const what = document.createElement('span');
       what.className = 'log-what';
-      what.textContent = e.text;
+      what.textContent = e.auto ? e.text : capFirst(String(e.text ?? '').replace(/^Manual:\s*/i, '')); // "Manual" sudah di kolom pelaku
       li.append(when, who, what);
       list.append(li);
     }

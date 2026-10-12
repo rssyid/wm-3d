@@ -50,14 +50,18 @@ test('elemen kontrak ada dan berlabel', T, async () => {
   assert.equal(await page.locator('.flow-narr[aria-live="polite"]').count(), 1);
 });
 
-test('kemarau 60 hari: P3 > 40 cm, badge PP "Tidak patuh", kategori Kering/Agak Kering, Q berformat', T, async () => {
+test('kemarau 60 hari: titik penaatan P4 > 40 cm, badge PP "Tidak patuh", kategori Kering/Agak Kering, Q berformat', T, async () => {
   const { page } = desk;
   await page.evaluate(() => {
     wmApp.setScenario('kemarau');
     wmApp.stepDays(60);
   });
-  const p3 = await snap(page, () => wmApp.getSnapshot().piezometers.find((p) => p.id === 'P3').depthCm);
-  assert.ok(p3 > 40, `P3 = ${p3}`);
+  const tp = await snap(page, () => wmApp.getSnapshot().piezometers.find((p) => p.isTP));
+  assert.equal(tp.id, 'P4', 'titik penaatan bawaan');
+  assert.ok(tp.depthCm > 40, `P4 = ${tp.depthCm}`);
+  assert.match(await page.locator('[data-kpi="tmat"]').innerText(), /titik penaatan P4/);
+  assert.match(await page.locator('.pp-strip').innerText(), /Hari patuh PP\s+\d+% \(\d+\/60 hari\)/);
+  assert.match(await page.locator('.badge-basis').innerText(), /rerata harian/);
   const pp = await page.locator('[data-badge="pp"]').innerText();
   assert.match(pp, /Tidak patuh/);
   const comp = await page.locator('[data-badge="perusahaan"]').innerText();
@@ -217,6 +221,9 @@ test('kamera, mode Manual, dan kontrol lahan menulis ke store', T, async () => {
   assert.equal(await snap(page, () => wmApp.store.get().scenarioId), 'manual');
   assert.equal(await page.locator('#manual-rain').isVisible(), true);
   assert.equal(await page.locator('#rain-scale').isVisible(), false);
+  // label slider Manual tidak terjepit di samping legend grup (bug float/clear)
+  const lw = await page.evaluate(() => document.querySelector('label[for="manual-rain"]').getBoundingClientRect().width);
+  assert.ok(lw > 60, `lebar label Curah hujan = ${lw}`);
   await page.locator('#manual-rain').fill('120');
   assert.equal(await snap(page, () => wmApp.store.get().manual.rainMmd), 120);
   await page.evaluate(() => wmApp.stepDays(3));
@@ -238,6 +245,17 @@ test('screenshot desktop terang (Tahun normal, 150 hari)', T, async () => {
     wmApp.stepDays(150);
   });
   await page.waitForTimeout(300);
+  // teks simpul Alur tidak keluar dari kotaknya
+  const overflow = await page.evaluate(() =>
+    [...document.querySelectorAll('#alur .flow-node')].flatMap((g) => {
+      const box = g.querySelector('rect.flow-box').getBBox();
+      return [...g.querySelectorAll('text')].filter((t) => { const b = t.getBBox(); return b.x + b.width > box.x + box.width + 0.5; }).map((t) => t.textContent);
+    }),
+  );
+  assert.deepEqual(overflow, [], 'teks simpul Alur meluap');
+  // Normal perusahaan + tidak patuh PP → catatan ketegangan
+  const st = await snap(page, () => ({ cls: wmApp.getSnapshot().ind.cls.id, ok: wmApp.getSnapshot().ind.pp.now }));
+  if (st.cls === 'normal' && !st.ok) assert.match(await page.locator('.tension').innerText(), /Normal.*tidak patuh/s);
   await screenshot(page, 'ui-desktop-light');
   assertClean(logs, 'desktop');
 });
@@ -268,6 +286,13 @@ test('ponsel 390×844: tanpa scroll horizontal, tab panel bekerja', T, async () 
   assert.equal(await page.locator('#panel-right').isVisible(), true);
   assert.equal(await page.locator('#panel-left').isVisible(), false);
   await page.waitForTimeout(300);
+  // cap skala viewport tidak menutupi bilah kamera/label atas di ponsel
+  const stamp = await page.evaluate(() => {
+    const r = document.querySelector('.vp-stamp').getBoundingClientRect();
+    const v = document.getElementById('viewport').getBoundingClientRect();
+    return { top: r.top - v.top, h: v.height };
+  });
+  assert.ok(stamp.top > stamp.h / 2, `cap skala di separuh bawah viewport (${stamp.top}/${stamp.h})`);
   await screenshot(page, 'ui-phone');
   await page.click('#mtab-kontrol');
   assert.equal(await page.locator('#panel-left').isVisible(), true);

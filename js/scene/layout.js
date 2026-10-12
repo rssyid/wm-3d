@@ -199,7 +199,7 @@ export const CAMERA_PRESETS = Object.freeze({
   ikhtisar: Object.freeze({ pos: [-175, 125, 240], target: [-5, -30, -45], fov: 45, fitW: 330 }),
   penampang: Object.freeze({ pos: [-84, -55.3, 200], target: [-84, -36, 0], fov: 35, fitW: 206, cutaway: true, scaleOffY: true }),
   'pintu-air': Object.freeze({ pos: [193, 16, -168], target: [198, -12, -225], fov: 48, fitW: 52, scaleOff: true }),
-  atas: Object.freeze({ pos: [20, 520, -19], target: [20, 0, -20], fov: 45, fitW: 420, cut: Object.freeze({ pos: [40, 330, -124], target: [40, 0, -125] }) }),
+  atas: Object.freeze({ pos: [20, 520, -19], target: [20, 0, -20], fov: 45, fitW: 420, cut: Object.freeze({ pos: [40, 380, -104], target: [40, 0, -105] }) }),
 });
 
 /**

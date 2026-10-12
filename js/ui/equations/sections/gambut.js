@@ -32,7 +32,7 @@ const integral = (lo, hi, body) => row(el('msubsup', mo('∫') + lo + hi), body)
 export function render(c) {
   const pt = c.params.peat;
   return `
-${p(`Gambut tropis sangat berpori di bagian atas (akar, serat kasar) dan makin padat ke bawah. Karena itu dua sifat utama berubah eksponensial dengan kedalaman muka air tanah ${im(S.zeta)} (m, positif ke bawah): <strong>specific yield</strong> ${im(S.Sy)} (berapa banyak air keluar bila muka air turun 1 m) dan <strong>konduktivitas hidrolik</strong> ${im(S.K)}.`)}
+${p(`Gambut tropis sangat berpori di bagian atas (akar, serat kasar) dan makin padat ke bawah. Karena itu dua sifat utama berubah eksponensial dengan kedalaman muka air tanah ${im(S.zeta)} (m, positif ke bawah): <strong>specific yield</strong> ${im(S.Sy)} (tinggi air yang dilepas per satuan luas bila muka air turun 1 m; ${im(row(S.Sy, mo('='), mn('0,1')))} berarti 100 mm air per 1 m penurunan) dan <strong>konduktivitas hidrolik</strong> ${im(S.K)}.`)}
 ${display(
   eq(
     fn(S.Sy, [S.zeta]),
@@ -130,15 +130,17 @@ export function live(c) {
         S.W,
         row(mo('−'), paren(row(nm(pt.SyD, 2), mo('×'), nm(z, 3), mo('+'), paren(row(nm(pt.SyS, 2), mo('−'), nm(pt.SyD, 2))), mo('×'), nm(pt.lamS, 2), mo('×'), paren(row(mn('1'), mo('−'), ex(row(mo('−'), nm(z, 3), mo('/'), nm(pt.lamS, 2)))))), '[', ']')),
         `${fmtSigned(1000 * k.W, 1)} mm`,
-        { note: `air yang bisa keluar sebelum muka air turun ${fmt(100 * z, 1)} cm` },
+        { note: `air yang sudah dilepas gambut sejak muka air berada di permukaan sampai turun ${fmt(100 * z, 1)} cm` },
       ),
     );
   }
   out['gb-calc'] = L.join('');
 
+  const pzById = Object.fromEntries(c.snap.piezometers.map((q) => [q.id, q]));
   const rows = c.ids.map((pid) => {
     const q = c.ex[pid].cell;
-    const cls = classifyTmat(100 * q.zeta);
+    // kategori dari kedalaman di posisi piezometer (interpolasi; sama dengan KPI & badge)
+    const cls = pzById[pid]?.cls ?? classifyTmat(q.piezometerDepthCm ?? 100 * q.zeta);
     return [
       `${esc(pid)}${pid === c.snap.ind.tpId ? ' <span class="eq-tag">TP</span>' : ''}`,
       `${q.i} (${fmt(q.x, 1)})`,
@@ -150,7 +152,7 @@ export function live(c) {
       fmtSigned(1000 * q.W, 0),
     ];
   });
-  out['gb-table'] = table(['Piezometer', 'Sel i (x, m)', 'ζ (cm)', 'Kategori', 'Sy', 'K (m/hari)', 'T (m²/hari)', 'W (mm)'], rows, {
+  out['gb-table'] = table(['Piezometer', 'Sel i (x, m)', 'ζ sel (cm)', 'Kategori (KPI)', 'Sy', 'K (m/hari)', 'T (m²/hari)', 'W (mm)'], rows, {
     num: [1, 2, 4, 5, 6, 7],
     cls: 'eq-compact',
     rowAttrs: (i) => (c.ids[i] === c.pz ? ' class="eq-row-current"' : ''),
@@ -162,10 +164,11 @@ export function live(c) {
 export function plots(c) {
   const cv = c.curves;
   const yAxis = { min: 0, max: cv.depth.at(-1), invert: true, label: 'ζ (m)' };
+  const pzById = Object.fromEntries(c.snap.piezometers.map((q) => [q.id, q]));
   const pts = (key) =>
     c.ids.map((pid) => {
       const q = c.ex[pid].cell;
-      const cls = classifyTmat(100 * q.zeta);
+      const cls = pzById[pid]?.cls ?? classifyTmat(100 * q.zeta);
       return { x: q[key], y: Math.max(q.zeta, 0), color: cls.color, r: pid === c.pz ? 6 : 4.5, ring: pid === c.pz, label: pid };
     });
   const pt = c.params.peat;

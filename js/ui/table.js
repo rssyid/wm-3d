@@ -6,6 +6,7 @@ import { S } from './strings.id.js';
 import { esc } from './dom.js';
 import { dailyRows, buildCsv } from './csv.js';
 import { ICONS } from './icons.js';
+import { DEFAULT_CONTROL } from '../model/index.js';
 
 const MAX_ROWS = 400; // tabel di layar; CSV selalu memuat semua hari
 
@@ -98,7 +99,7 @@ export function createTable(container, { meta }) {
     lastRender = performance.now();
     const n = series?.n ?? 0;
     empty.hidden = n > 0;
-    const tpId = series?.tpId ?? 'P3';
+    const tpId = series?.tpId ?? DEFAULT_CONTROL.tpId;
     for (const [id, th] of Object.entries(thPz)) th.classList.toggle('is-tp', id === tpId);
     if (!n) {
       tbody.textContent = '';

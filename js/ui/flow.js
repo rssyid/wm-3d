@@ -7,8 +7,8 @@ import { createNarrator } from './narrative.js';
 import { textSlot } from './dom.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-const W = 300;
-const NODE = { x: 26, w: 150, h: 38 };
+const W = 322;
+const NODE = { x: 26, w: 178, h: 38 };
 const GAP = 42;
 const CX = NODE.x + NODE.w / 2;
 const ROWS = ['rain', 'soil', 'canal', 'gate', 'river'];
@@ -104,7 +104,7 @@ export function createFlow(container) {
   // ET: panah horizontal dari simpul air tanah
   const etY = rowY(1) + NODE.h / 2;
   const etX0 = NODE.x + NODE.w;
-  const etX1 = etX0 + 34;
+  const etX1 = etX0 + 30;
   const etG = svgEl('g', { class: 'flow-edge e-et' }, svg);
   const etShaft = svgEl('path', { class: 'flow-shaft' }, etG);
   const etDash = svgEl('line', { x1: etX0 + 2, x2: etX1 - 9, y1: etY, y2: etY, class: 'flow-dash' }, etG);
@@ -125,7 +125,7 @@ export function createFlow(container) {
     const v = svgEl('text', { x: NODE.x + 9, y: y + 30, class: 'flow-nval' }, g);
     let sw = null;
     if (id === 'soil') sw = svgEl('rect', { x: NODE.x + NODE.w - 20, y: y + 9, width: 12, height: 12, rx: 2.5, class: 'flow-sw' }, g);
-    nodes[id] = { v, sw };
+    nodes[id] = { t, v, sw };
   });
 
   const eq = textSlot(wrap.querySelector('[data-f="eq"]'));
@@ -141,8 +141,8 @@ export function createFlow(container) {
 
   function setEdge(e, flux, valText, capText) {
     const w = edgeWidth(flux);
-    const dir = flux < -1e-6 ? -1 : 1;
-    const zero = Math.abs(flux) < 0.05;
+    const zero = Math.abs(flux) < 0.05; // < 0,05 mm/hari: tampil "0,0", panah pudar tanpa arah balik
+    const dir = !zero && flux < 0 ? -1 : 1;
     if (Math.abs(w - e.w) > 0.05 || dir !== e.dir) {
       e.w = w;
       e.dir = dir;
@@ -160,10 +160,11 @@ export function createFlow(container) {
     const st = snap.structure;
     const mm = (v) => `${fmt(v, 1)} mm/hari`;
 
+    const rev = (v) => v <= -0.05;
     setEdge(edges.rain, fx.rain, `${fmt(fx.rain, 1)} mm/24 jam`, F.infil);
-    setEdge(edges.seep, fx.toCanal.total, mm(fx.toCanal.total), fx.toCanal.total < -1e-6 ? F.feedFromCanal : F.seep);
-    setEdge(edges.over, fx.discharge, mm(fx.discharge), fx.discharge < -1e-6 ? F.back : F.over);
-    setEdge(edges.out, fx.discharge, fmtQ(st.q_m3s), fx.discharge < -1e-6 ? F.back : S.kpi.toRiver);
+    setEdge(edges.seep, fx.toCanal.total, mm(fx.toCanal.total), rev(fx.toCanal.total) ? F.feedFromCanal : F.seep);
+    setEdge(edges.over, fx.discharge, mm(fx.discharge), rev(fx.discharge) ? F.back : F.over);
+    setEdge(edges.out, fx.discharge, fmtQ(st.q_m3s), rev(fx.discharge) ? F.back : S.kpi.toRiver);
 
     const w = edgeWidth(fx.et);
     if (Math.abs(w - et.w) > 0.05) {
@@ -177,8 +178,9 @@ export function createFlow(container) {
     setT(nodes.soil.v, `${tp.id} ${fmtElevCm(tp.depthCm)} · ${snap.ind.cls.label}`);
     if (nodes.soil.sw) setA(nodes.soil.sw, 'fill', snap.ind.cls.color);
     setT(nodes.canal.v, `${fmtElevCm(snap.canal.tmasCm)} · ${snap.canal.tmasCls.label}`);
+    setT(nodes.gate.t, st.submerged && Math.abs(st.q_m3s) > 1e-5 ? `${F.gate} · ${F.submerged}` : F.gate);
     setT(nodes.gate.v, `${st.nLogs} stoplog · mercu ${fmtElevCm(-st.crestM * 100)}`);
-    setT(nodes.river.v, `${fmtSigned(snap.river.levelM, 2)} m${st.submerged ? ' · pintu terendam' : ''}`);
+    setT(nodes.river.v, F.riverLevel(fmtSigned(snap.river.levelM * 100, 0)));
 
     svg.classList.toggle('is-paused', !playing);
 

@@ -31,7 +31,7 @@ const delta = row(S.zi, mo('−'), S.hfd);
 export function render(c) {
   const fd = c.params.fieldDrains;
   return `
-${p(`Parit lapangan (parit cacing/parit kecil) digali setiap ${fmt(fd.spacing, 0)} m di antara baris sawit, tegak lurus saluran koleksi, sedalam ${fmt(fd.depth, 1)} m di bawah permukaan. Parit terlalu rapat untuk digambar sebagai sel tersendiri, sehingga pengaruhnya dihitung sebagai <strong>sink sub-grid</strong> ${im(S.fi)} (m/hari) di setiap sel transek. Bentuknya mengikuti persamaan jarak drainase <strong>Hooghoudt</strong> untuk aliran tunak di antara dua parit sejajar:`)}
+${p(`Parit lapangan (saluran tersier) digali setiap ${fmt(fd.spacing, 0)} m di antara baris sawit, tegak lurus saluran koleksi, sedalam ${fmt(fd.depth, 1)} m di bawah permukaan. Parit terlalu rapat untuk digambar sebagai sel tersendiri, sehingga pengaruhnya dihitung sebagai <strong>sink sub-grid</strong> ${im(S.fi)} (m/hari) di setiap sel transek. Bentuknya mengikuti persamaan jarak drainase <strong>Hooghoudt</strong> untuk aliran tunak di antara dua parit sejajar:`)}
 ${display(eq(S.fi, frac(row(mn('12'), mo('·'), S.Tm, mo('·'), paren(delta)), sup(S.sfd, mn('2')))), '6.1')}
 ${display(row(eq(S.hfd, fn('max', [S.hc, S.zfdi], ';')), mo(','), space('1.2em'), eq(S.zfdi, row(S.zsi, mo('−'), S.dfd))), '6.2')}
 ${display(eq(S.Tm, row(mn('½'), paren(row(fn(S.T, [S.zetai]), mo('+'), fn(S.T, [row(S.zsi, mo('−'), S.hfd)]))))), '6.3')}
@@ -61,7 +61,14 @@ ${h3('Parit lapangan di tiap piezometer')}
 
 function status(q) {
   if (!q.fdActive || q.f === 0) return '<span class="eq-muted">tidak aktif</span>';
-  return q.f > 0 ? 'menguras' : '<strong>mengisi dari saluran</strong>';
+  if (q.f > 0) return 'menguras';
+  return '<strong>mengisi dari saluran</strong>';
+}
+
+/** Alasan parit tidak mengalirkan air (syarat 6.4). */
+function inactiveReason(k, hc) {
+  if (k.z <= k.fdLevel && hc <= k.fdBed) return 'muka air tanah di bawah dasar parit dan parit kering: tidak ada aliran (6.4)';
+  return 'muka air tanah sama dengan muka air parit: tidak ada aliran (6.4)';
 }
 
 export function live(c) {
@@ -90,7 +97,7 @@ export function live(c) {
   if (!fd.enabled) {
     L.push(line(S.fi, null, '0 mm/hari', { note: 'parit dimatikan' }));
   } else if (!k.fdActive) {
-    L.push(line(S.fi, null, '0 mm/hari', { note: 'syarat (6.4) tidak terpenuhi' }));
+    L.push(line(S.fi, null, '0 mm/hari', { note: inactiveReason(k, cn.h) }));
   } else {
     L.push(line(S.Tm, null, `${fmt(k.fdTm, 2)} m²/hari`, { note: `rata-rata T di muka air tanah (${fmt(k.T, 2)}) dan di muka air parit` }));
     L.push(
@@ -119,7 +126,7 @@ export function live(c) {
       status(q),
     ];
   });
-  out['pr-table'] = table(['Piezometer', 'Sel i', 'z_fd (m)', 'h_fd (m)', 'z − h_fd (cm)', 'T̄ₘ (m²/hari)', 'f (mm/hari)', 'Keadaan'], rows, {
+  out['pr-table'] = table(['Piezometer', 'Sel i', 'z<sub>fd</sub> (m)', 'h<sub>fd</sub> (m)', 'z − h<sub>fd</sub> (cm)', 'T̄<sub>m</sub> (m²/hari)', 'f (mm/hari)', 'Keadaan'], rows, {
     num: [1, 2, 3, 4, 5, 6],
     cls: 'eq-compact',
     rowAttrs: (j) => (c.ids[j] === c.pz ? ' class="eq-row-current"' : ''),

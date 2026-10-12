@@ -254,7 +254,7 @@
   font-size: var(--fs-lg);
 }
 
-.eq-section ul.eq-list {
+.eq-section .eq-list {
   margin: var(--sp-2) 0;
   padding-left: 1.25em;
   max-width: 74ch;
@@ -320,7 +320,8 @@
 }
 
 .view-persamaan math .eq-brace {
-  transform: scaleY(calc(0.85 * var(--rows, 2)));
+  /* kurawal tanpa fon matematika tidak meregang: skala ≈ tinggi tabel kasus (diukur: ±18 px per kurawal, 26–38 px per baris) */
+  transform: scaleY(calc(1.1 * var(--rows, 2) + 1.7));
   margin-inline: 0.1em 0.25em;
 }
 
@@ -371,10 +372,8 @@
 
 .eq-calc-sub {
   margin: 10px 0 2px;
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--muted);
 }
 
@@ -477,15 +476,14 @@
   font-size: var(--fs-sm);
 }
 
-.eq-table caption {
-  caption-side: top;
-  text-align: left;
-  padding: 8px 12px 6px;
-  font-size: var(--fs-xs);
+/* keterangan tabel di luar kotak gulir agar tidak ikut terpotong di layar sempit (tanpa huruf kapital: satuan!) */
+.eq-table-cap {
+  margin: var(--sp-3) 0 calc(-1 * var(--sp-2));
+  font-size: var(--fs-sm);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--muted);
+  line-height: 1.45;
+  max-width: 80ch;
 }
 
 .eq-table th,

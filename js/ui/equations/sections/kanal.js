@@ -163,14 +163,14 @@ export function plots(c) {
   return {
     'kn-v': {
       x: { min: cv.zMin, max: cv.top, label: 'h (m)' },
-      y: { min: 0, max: Math.max(...cv.V) * 1.05, label: 'V (m³)', fmt: (v) => fmt(v / 1000, 0) + 'k' },
+      y: { min: 0, max: Math.max(...cv.V) * 1.05, label: 'V (m³)', fmt: (v) => fmt(v, 0) },
       series: [{ x: cv.h, y: cv.V, color: '--series-tmas', width: 2 }],
       vlines: [{ x: c.e.geometry.zBank, color: '--series-muted', dash: true, label: 'tanggul' }],
       points: [{ x: h, y: c.e.canal.V, color: '--accent', r: 5, ring: true, label: `${fmt(h, 2)} m` }],
     },
     'kn-aw': {
       x: { min: cv.zMin, max: cv.top, label: 'h (m)' },
-      y: { min: 0, max: Math.max(...cv.Aw) * 1.08, label: 'Aw (m²)', fmt: (v) => fmt(v / 1000, 1) + 'k' },
+      y: { min: 0, max: Math.max(...cv.Aw) * 1.08, label: 'Aw (m²)', fmt: (v) => fmt(v, 0) },
       series: [{ x: cv.h, y: cv.Aw, color: '--series-rain', width: 2 }],
       vlines: [{ x: c.e.geometry.zBank, color: '--series-muted', dash: true, label: 'tanggul' }],
       points: [{ x: h, y: c.e.canal.Aw, color: '--accent', r: 5, ring: true }],

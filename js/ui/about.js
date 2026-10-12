@@ -1,6 +1,6 @@
 // Tab "Tentang Model" (#view-tentang): tujuan, rantai sebab-akibat, satuan & tanda, ringkasan model,
 // kategori perusahaan vs PP 57/2016, asumsi & keterbatasan, cara memakai, referensi.
-import { DEFAULT_CONTROL, CONTROL_TARGETS, PP_BASIS } from '../model/index.js';
+import { DEFAULT_CONTROL, DEFAULT_PARAMS, CONTROL_TARGETS, PP_BASIS, safeMaxLogs } from '../model/index.js';
 import { esc } from './dom.js';
 
 const SECTIONS = [
@@ -33,6 +33,8 @@ export function createAbout(root, { meta } = {}) {
   const classes = meta?.tmatClasses ?? [];
   const tp = (meta?.piezometers ?? []).find((p) => p.id === DEFAULT_CONTROL.tpId);
   const targets = Object.values(meta?.controlTargets ?? CONTROL_TARGETS);
+  const weir = meta?.weir ?? DEFAULT_PARAMS.weir;
+  const peat = DEFAULT_PARAMS.peat;
   const version = meta?.version ? `Versi ${esc(meta.version)}` : '';
 
   root.innerHTML = `
@@ -99,7 +101,7 @@ export function createAbout(root, { meta } = {}) {
           <div><dt>TMAS</dt><dd>Muka air saluran relatif tanggul, mis. “−35 cm”. Papan duga dibaca dengan nol di
           tanggul, jadi bacaannya sama.</dd></div>
           <div><dt>Mercu</dt><dd>Elevasi puncak stoplog relatif tanggul: ambang −2,00 m + 0,20 m × jumlah papan
-          (7 papan → −60 cm; 8 papan → −40 cm).</dd></div>
+          (bawaan 7 papan → −60 cm; 8 papan → −40 cm).</dd></div>
           <div><dt>Pembuangan</dt><dd>Q dalam m³/s dan L/s, juga mm/hari — volume per hari dibagi luas blok + saluran
           (±30,6 ha) — agar bisa dibandingkan langsung dengan curah hujan.</dd></div>
           <div><dt>Waktu & angka</dt><dd>Langkah model 1 jam; grafik, tabel, dan kepatuhan memakai rata-rata harian.
@@ -116,8 +118,9 @@ export function createAbout(root, { meta } = {}) {
           Lahan → Lanjutan). Kedalaman dihitung terhadap permukaan setempat, jadi blok tidak datar dalam model maupun
           tampilan.</li>
           <li><strong>Sifat gambut:</strong> hasil jenis Sy dan konduktivitas K menurun eksponensial terhadap
-          kedalaman; transmisivitas T adalah integral K sampai dasar gambut. Lapisan atas yang sangat permeabel
-          membuat muka air dekat permukaan cepat surut.</li>
+          kedalaman; transmisivitas T adalah integral K sampai dasar gambut. K permukaan bawaan ${esc(String(peat.Ks))} m/hari
+          (gambut kebun yang sudah didrainase; gambut hutan ±200 m/hari). Lapisan atas yang sangat permeabel membuat
+          muka air dekat permukaan cepat surut.</li>
           <li><strong>Evapotranspirasi:</strong> ETp skenario dikalikan faktor β yang mengecil bila muka air dalam.</li>
           <li><strong>Parit lapangan:</strong> dihitung sebagai aliran sub-grid tipe Hooghoudt, f = 12·T·Δ/s²
           (jarak 59 m).</li>
@@ -129,10 +132,10 @@ export function createAbout(root, { meta } = {}) {
           dengan slider.</li>
           <li><strong>Mode Otomatis:</strong> dievaluasi sekali sehari; tambah/kurangi 1 stoplog bila rata-rata
           harian TMAT di titik penaatan keluar dari pita target (${targets
-            .map((t) => `${esc(t.id === 'pp' ? 'PP' : 'perusahaan')} ${t.band[0]}–${t.band[1]} cm`)
+            .map((t) => `${esc(t.id === 'pp' ? 'PP' : 'perusahaan')} ${t.band[0]}–${t.band[1]} cm, maks. ${safeMaxLogs(weir, 0, t.id)} stoplog`)
             .join('; ')}), dengan histeresis 3 cm dan jeda ≥ 2 hari. Jumlah papan dibatasi agar mercu tidak terlalu
-          dekat ke tanggul. Darurat (TMAS terlalu dangkal atau ada genangan): buang 2 papan bila sungai lebih rendah
-          dari saluran.</li>
+          dekat ke tanggul; bila target tidak tercapai pada jumlah maksimum, log mencatat “target tidak tercapai”.
+          Darurat (TMAS terlalu dangkal atau ada genangan): buang 2 papan bila sungai lebih rendah dari saluran.</li>
           <li><strong>Numerik:</strong> langkah 1 jam dengan sub-langkah adaptif untuk stabilitas; neraca massa
           tertutup (residu relatif &lt; 10<sup>−9</sup>).</li>
         </ul>
@@ -156,7 +159,7 @@ export function createAbout(root, { meta } = {}) {
         — dapat diganti di Lahan → Lanjutan. Dasar penilaian: ${esc(PP_BASIS)}.</p>
         <p class="about-callout about-callout-warn" role="note"><strong>Perhatikan:</strong> kategori
         “Normal” perusahaan (46–60 cm) dan “Agak Tergenang” (41–45 cm) berada di luar batas PP. Kebun yang dikelola
-        “Normal” menurut perusahaan berarti <em>tidak patuh</em> PP 57/2016. Badge PP menampilkan status saat ini,
+        “Normal” menurut perusahaan berarti <em>tidak patuh</em> PP 57/2016. Badge PP menampilkan status saat ini (jam ini); di bawahnya
         persentase hari patuh, dan rentetan hari tidak patuh terpanjang.</p>
       </section>
 

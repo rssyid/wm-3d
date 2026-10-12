@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createModel, advance, explain } from '../../js/model/index.js';
 import { m3dToMmd, flowFluxes, edgeWidth, balanceTerms } from '../../js/ui/flowmath.js';
-import { riseText, flowDirection, tensionNote } from '../../js/ui/kpi.js';
+import { riseText, flowDirection, tensionNote, wetNote } from '../../js/ui/kpi.js';
 import { placeCard, pickContent } from '../../js/ui/overlay.js';
 import { TMAT_CLASSES } from '../../js/model/index.js';
 
@@ -75,4 +75,37 @@ test('pickContent: kartu untuk piezometer, papan duga, pintu air, penampang', ()
   assert.ok(pickContent({ type: 'section' }, snap).rows.length >= 3);
   assert.equal(pickContent({ type: 'lain' }, snap), null);
   assert.equal(pickContent({ type: 'gate' }, null), null);
+});
+
+test('tensionNote/wetNote: dua arah ketegangan kategori perusahaan vs PP 57/2016', () => {
+  const by = (id) => TMAT_CLASSES.find((c) => c.id === id);
+  // Agak Tergenang tidak disebut "baik" oleh perusahaan, tetapi tetap tidak patuh PP
+  const at = tensionNote(by('agak-tergenang'), false);
+  assert.match(at, /Agak Tergenang/);
+  assert.match(at, /tidak patuh/);
+  assert.doesNotMatch(at, /baik menurut perusahaan/);
+  assert.match(tensionNote(by('normal'), false), /baik menurut perusahaan/);
+  // kebalikannya: patuh PP tetapi terlalu basah menurut perusahaan
+  assert.match(wetNote(by('tergenang'), true), /Patuh PP 57\/2016.*Tergenang/);
+  assert.match(wetNote(by('banjir'), true), /Banjir/);
+  assert.equal(wetNote(by('tergenang'), false), null);
+  assert.equal(wetNote(by('normal'), true), null);
+  assert.equal(wetNote(by('kering'), false), null);
+});
+
+test('pickContent: status PP hanya di titik penaatan; piezometer lain = pembanding batas 40 cm', () => {
+  const m = createModel({ scenarioId: 'kemarau' });
+  const snap = advance(m, 24 * 30);
+  const tp = snap.piezometers.find((p) => p.isTP);
+  assert.equal(tp.id, 'P4', 'titik penaatan bawaan = P4 (tengah petak)');
+  const tpCard = pickContent({ type: 'piezometer', id: tp.id }, snap);
+  assert.ok(tpCard.rows.some(([l, v]) => l === 'PP 57/2016' && /patuh/i.test(v)));
+  const other = pickContent({ type: 'piezometer', id: 'P1' }, snap);
+  assert.ok(!other.rows.some(([, v]) => /^(Patuh|Tidak patuh)$/.test(v)), 'non-TP tidak diberi status Patuh/Tidak patuh');
+  assert.ok(other.rows.some(([l, v]) => /Batas PP/.test(l) && /terpenuhi|terlampaui/.test(v)));
+  // muka air sungai di kartu pintu air: cm relatif tanggul (satuan sama dengan TMAS & mercu)
+  const gate = pickContent({ type: 'gate' }, snap);
+  const river = gate.rows.find(([l]) => /sungai/i.test(l));
+  assert.match(river[1], /^[−+]?\d+ cm$/);
+  assert.equal(river[1], `${snap.river.levelM < 0 ? '−' : '+'}${Math.round(Math.abs(snap.river.levelM) * 100)} cm`);
 });

@@ -147,7 +147,7 @@ function drawRuler(canvas, ve, zBase) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, W, H);
   const y = (m) => ((top - m) / hM) * H;
-  const rulerW = 40;
+  const rulerW = 36;
   ctx.fillStyle = 'rgba(250,250,245,0.95)';
   ctx.fillRect(0, 0, rulerW, H);
   ctx.strokeStyle = '#111';
@@ -161,7 +161,8 @@ function drawRuler(canvas, ve, zBase) {
     const major = Math.abs(m * 2 - Math.round(m * 2)) < 1e-6;
     ctx.fillRect(0, yy - (major ? 1.5 : 0.75), major ? rulerW * 0.7 : rulerW * 0.35, major ? 3 : 1.5);
   }
-  const fs = Math.max(9, Math.min(22, pxPerM * 0.28));
+  // huruf sebesar mungkin tanpa bertumpuk (jarak angka 0,5 m pada VE ≥ 6, 1 m bila lebih kecil)
+  const fs = Math.max(10, Math.min(40, pxPerM * 0.34));
   ctx.font = `600 ${fs}px "IBM Plex Mono", ui-monospace, monospace`;
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
@@ -181,18 +182,27 @@ function drawRuler(canvas, ve, zBase) {
     ['Fibrik', -1.5, zBase],
     ['Lempung mineral', zBase, bot],
   ];
-  const fs2 = Math.max(9, Math.min(24, pxPerM * 0.3));
+  const fs2 = Math.max(10, Math.min(36, pxPerM * 0.3));
   ctx.font = `600 ${fs2}px "IBM Plex Sans", system-ui, sans-serif`;
   for (const [name, a, b] of bands) {
     const yy = (y(a) + y(b)) / 2;
     if (y(b) - y(a) < fs2 * 1.1) continue;
-    const x = 118;
-    const lines = ctx.measureText(name).width > W - x - 10 ? name.split(' ') : [name];
-    const lh = fs2 * 1.15;
-    const w = Math.max(...lines.map((t) => ctx.measureText(t).width));
+    const x = 160;
+    const room = W - x - 8;
+    ctx.font = `600 ${fs2}px "IBM Plex Sans", system-ui, sans-serif`;
+    const lines = ctx.measureText(name).width > room ? name.split(' ') : [name];
+    let f = fs2;
+    let w = Math.max(...lines.map((t) => ctx.measureText(t).width));
+    if (w > room) {
+      // perkecil huruf agar baris terpanjang muat di kanvas
+      f = Math.max(9, Math.floor((fs2 * room) / w));
+      ctx.font = `600 ${f}px "IBM Plex Sans", system-ui, sans-serif`;
+      w = Math.max(...lines.map((t) => ctx.measureText(t).width));
+    }
+    const lh = f * 1.15;
     const y0 = yy - ((lines.length - 1) * lh) / 2;
     ctx.fillStyle = 'rgba(20,16,12,0.62)';
-    ctx.fillRect(x - 6, y0 - fs2 * 0.7, w + 12, fs2 * 1.4 + (lines.length - 1) * lh);
+    ctx.fillRect(x - 6, y0 - f * 0.7, w + 12, f * 1.4 + (lines.length - 1) * lh);
     ctx.fillStyle = '#fbf6ee';
     lines.forEach((t, i) => ctx.fillText(t, x, y0 + i * lh));
   }

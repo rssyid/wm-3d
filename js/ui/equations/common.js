@@ -228,9 +228,22 @@ export function table(head, rows, { num = [], caption = '', cls = '', rowAttrs, 
       return `<tr${ra}>${r.map((c, j) => (j === 0 ? `<th scope="row">${c}</th>` : `<td${numSet.has(j) ? ' class="n"' : ''}>${c}</td>`)).join('')}</tr>`;
     })
     .join('');
-  const cap = caption ? `<caption>${caption}</caption>` : '';
+  // Keterangan ditulis di luar kotak gulir (tabel lebar di ponsel tidak memotongnya); nama aksesibel tabel = teks keterangan.
+  const capText = caption ? stripTags(caption) : '';
+  const cap = caption ? `<p class="eq-table-cap" aria-hidden="true">${caption}</p>` : '';
   const aria = label ? ` role="region" aria-label="${esc(label)}" tabindex="0"` : '';
-  return `<div class="eq-scroll"${aria}><table class="eq-table ${cls}">${cap}<thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>`;
+  const tAria = capText ? ` aria-label="${esc(capText)}"` : '';
+  return `${cap}<div class="eq-scroll"${aria}><table class="eq-table ${cls}"${tAria}><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+const ENT = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+/** Teks polos dari potongan HTML sederhana (untuk aria-label). */
+export function stripTags(html) {
+  return String(html ?? '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(amp|lt|gt|quot|#39);/g, (m) => ENT[m])
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Tabel simbol: [{sym (isi MathML), arti, unit, val | valHtml}] → Simbol | Arti | Satuan | Nilai saat ini. */

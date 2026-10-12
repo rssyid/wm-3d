@@ -2,15 +2,20 @@
 // Fungsi tick murni (niceTicks, logTicks) bisa dites di Node; drawPlot butuh DOM.
 import { fmt } from '../format.js';
 
-/** Tick "bagus" (1–2–5 × 10ⁿ) antara min dan max, kira-kira `count` buah. */
-export function niceTicks(min, max, count = 5) {
+/**
+ * Tick "bagus" (1–2–2,5–5 × 10ⁿ) antara min dan max, kira-kira `count` buah.
+ * minStep: langkah minimum (mis. 1 untuk sumbu bilangan bulat seperti hari).
+ */
+export function niceTicks(min, max, count = 5, minStep = 0) {
   if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return { ticks: [min], step: 1 };
   const lo = Math.min(min, max);
   const hi = Math.max(min, max);
   const raw = (hi - lo) / Math.max(count, 1);
   const p = 10 ** Math.floor(Math.log10(raw));
   const r = raw / p;
-  const step = (r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10) * p;
+  let step = (r <= 1 ? 1 : r <= 2 ? 2 : r <= 2.5 ? 2.5 : r <= 5 ? 5 : 10) * p;
+  if (minStep > 0 && step < minStep) step = minStep;
+  else if (minStep > 0 && Math.abs(step / minStep - Math.round(step / minStep)) > 1e-9) step = 2 * p; // 2,5 → 2
   const ticks = [];
   const start = Math.ceil(lo / step - 1e-9) * step;
   for (let v = start; v <= hi + step * 1e-9; v += step) ticks.push(Math.abs(v) < step * 1e-9 ? 0 : v);
@@ -30,10 +35,14 @@ export function logTicks(min, max) {
   return out;
 }
 
-/** Desimal label untuk langkah tick. */
+/** Desimal terkecil (0–4) yang menuliskan setiap kelipatan `step` dengan tepat: 2,5 → 1; 0,25 → 2; 50 → 0. */
 export function tickDigits(step) {
-  if (!(step > 0)) return 0;
-  return Math.max(0, Math.min(4, -Math.floor(Math.log10(step) + 1e-9) + (String(step).includes('25') ? 1 : 0)));
+  if (!(step > 0) || !Number.isFinite(step)) return 0;
+  for (let d = 0; d < 4; d++) {
+    const v = step * 10 ** d;
+    if (Math.abs(v - Math.round(v)) < 1e-6 * Math.max(1, v)) return d;
+  }
+  return 4;
 }
 
 function cssVar(el, name, fallback) {
@@ -92,8 +101,10 @@ export function drawPlot(canvas, spec) {
   const Y = spec.y.invert ? axisMap(spec.y, T, B) : axisMap(spec.y, B, T);
 
   // tick
-  const xt = spec.x.ticks ? { ticks: spec.x.ticks, step: NaN } : spec.x.log ? { ticks: logTicks(spec.x.min, spec.x.max), step: NaN } : niceTicks(spec.x.min, spec.x.max, small ? 4 : 6);
-  const yt = spec.y.ticks ? { ticks: spec.y.ticks, step: NaN } : spec.y.log ? { ticks: logTicks(spec.y.min, spec.y.max), step: NaN } : niceTicks(spec.y.min, spec.y.max, 5);
+  const ticksOf = (ax, count) =>
+    ax.ticks ? { ticks: ax.ticks, step: NaN } : ax.log ? { ticks: logTicks(ax.min, ax.max), step: NaN } : niceTicks(ax.min, ax.max, count, ax.integer ? 1 : 0);
+  const xt = ticksOf(spec.x, small ? 4 : 6);
+  const yt = ticksOf(spec.y, 5);
   const fmtTick = (ax, t, v) => {
     if (ax.fmt) return ax.fmt(v);
     if (ax.log) return fmt(v, v < 1 ? Math.min(3, -Math.floor(Math.log10(v))) : 0);
@@ -248,6 +259,17 @@ export function drawPlot(canvas, spec) {
   }
   ctx.restore();
 
+  // kotak teks yang sudah digambar (label garis referensi, label titik, teks bebas) → hindari tumpang-tindih
+  const placed = [];
+  const hit = (a) => placed.some((b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0);
+  const boxOf = (text, x, y, align, base) => {
+    const w = ctx.measureText(text).width;
+    const h = fs + 2;
+    const x0 = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
+    const y0 = base === 'bottom' ? y - h : base === 'middle' ? y - h / 2 : y;
+    return { x0, y0, x1: x0 + w, y1: y0 + h };
+  };
+
   // label garis referensi (di luar clip agar tidak terpotong)
   ctx.font = `${fs}px ${fontBody}`;
   const halo = (text, x, y) => {
@@ -261,17 +283,25 @@ export function drawPlot(canvas, spec) {
     const y = Y(l.y);
     if (y < T || y > B) continue;
     ctx.fillStyle = color(canvas, l.color, ink);
-    ctx.textAlign = l.align === 'left' ? 'left' : 'right';
-    ctx.textBaseline = l.below ? 'top' : 'bottom';
-    halo(l.label, l.align === 'left' ? L + 4 : R - 4, y + (l.below ? 2 : -2));
+    const align = l.align === 'left' ? 'left' : 'right';
+    const base = l.below ? 'top' : 'bottom';
+    const lx = align === 'left' ? L + 4 : R - 4;
+    const ly = y + (l.below ? 2 : -2);
+    ctx.textAlign = align;
+    ctx.textBaseline = base;
+    halo(l.label, lx, ly);
+    placed.push(boxOf(l.label, lx, ly, align, base));
   }
   for (const l of spec.vlines || []) {
     if (!l.label) continue;
     const x = X(l.x);
     ctx.fillStyle = color(canvas, l.color, ink);
-    ctx.textAlign = x > (L + R) / 2 ? 'right' : 'left';
+    const align = x > (L + R) / 2 ? 'right' : 'left';
+    const lx = x + (align === 'right' ? -4 : 4);
+    ctx.textAlign = align;
     ctx.textBaseline = 'top';
-    halo(l.label, x + (x > (L + R) / 2 ? -4 : 4), T + 3);
+    halo(l.label, lx, T + 3);
+    placed.push(boxOf(l.label, lx, T + 3, align, 'top'));
   }
 
   // titik
@@ -305,9 +335,6 @@ export function drawPlot(canvas, spec) {
     }
     if (p.label) labels.push({ x, y, r, text: p.label, below: p.labelBelow, prio: p.ring ? 1 : 0 });
   }
-
-  const placed = [];
-  const hit = (a) => placed.some((b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0);
 
   // label titik: hindari tumpang-tindih (titik bercincin didahulukan; label yang tak muat dilewati)
   ctx.font = `600 ${fs}px ${fontBody}`;

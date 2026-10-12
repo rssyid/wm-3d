@@ -65,15 +65,19 @@ ${p(`Debit dihitung untuk muka air saluran hasil penyelesaian implisit (bagian 7
 <div class="eq-live" data-live="pa-sym"></div>
 ${calcBox('pa-calc')}
 <div class="eq-plots eq-plots-1">
-${plot('pa-rating', 'Kurva rating Q(H) aliran bebas untuk mercu saat ini, dengan titik operasi sekarang', {
-  legend: [legendItem('Q(H) aliran bebas', '--series-q'), legendItem('Titik operasi', '--accent', { dot: true })].join(''),
+${plot('pa-rating', 'Kurva rating Q(H₁) untuk mercu saat ini, dengan titik operasi sekarang', {
+  legend: [
+    legendItem('Q(H₁) aliran bebas', '--series-q'),
+    legendItem('Q(H₁) dengan muka sungai saat ini (bila di atas mercu)', '--series-tmas', { dash: true }),
+    legendItem('Titik operasi', '--accent', { dot: true }),
+  ].join(''),
 })}
 </div>
 ${h3('Pengaruh jumlah stoplog')}
 ${p(`Mercu menentukan muka air saluran terendah yang masih bisa dibuang lewat pintu air. Tabel berikut memakai ${im(S.crest)} dari persamaan (8.1); TMAS minimum = muka air tepat di mercu (TMAS = 100·(${im(S.zbank)} − ${im(S.crest)}) cm).`)}
 <div class="eq-live" data-live="pa-logs"></div>
 ${h3('Muka air sungai')}
-${p(`Muka air sungai di hilir pintu air dimodelkan sebagai respons lambat terhadap hujan: rata-rata bergerak eksponensial ${im(S.Er)} (mm/hari) dengan waktu tunda ${im(S.tauR)} = ${fmt(rv.tauR, 0)} hari, dibatasi atas oleh ${im(S.zRmax)}. Pada mode Manual nilai ${im(S.hr)} langsung dari slider.`)}
+${p(`Muka air sungai di hilir pintu air dimodelkan sebagai respons lambat terhadap hujan: rata-rata bergerak eksponensial curah hujan ${im(S.Er)} (mm/hari) dengan konstanta waktu ${im(S.tauR)} = ${fmt(rv.tauR, 0)} hari, dibatasi atas oleh ${im(S.zRmax)}. Pada mode Manual nilai ${im(S.hr)} langsung dari slider.`)}
 ${display(eq(S.hr, fn('min', [row(S.zR0, mo('+'), S.gR, mo('·'), S.Er), S.zRmax], ';')), '8.7')}
 ${display(eq(row(mi('d'), S.Er, mo('/'), mi('d'), S.t), row(paren(row(S.P, mo('−'), S.Er)), mo('/'), S.tauR)), '8.8')}
 ${display(row(sup(S.Er, mtext('baru')), mo('='), S.Er, mo('+'), paren(row(S.P, mo('−'), S.Er)), paren(row(mn('1'), mo('−'), sup(mi('e', { mathvariant: 'normal' }), row(mo('−'), S.dt, mo('/'), S.tauR))))), '8.9')}
@@ -124,11 +128,16 @@ export function live(c) {
     { sym: S.crest, arti: 'elevasi mercu', unit: 'm', val: fmt(wd.crest, 2) },
     { sym: S.hc, arti: 'muka air saluran (hulu pintu)', unit: 'm', val: fmt(wd.hc, 3) },
     { sym: S.hr, arti: 'muka air sungai (hilir pintu)', unit: 'm', val: fmt(wd.hr, 3) },
-    { sym: S.H1, arti: 'tinggi energi hulu di atas mercu', unit: 'm', val: fmt(wd.H1, 3) },
-    { sym: S.H2, arti: 'tinggi muka hilir di atas mercu', unit: 'm', val: fmt(wd.H2, 3) },
+    { sym: S.H1, arti: 'tinggi muka air hulu (saluran) di atas mercu; negatif = di bawah mercu', unit: 'm', val: fmt(wd.H1, 3) },
+    { sym: S.H2, arti: 'tinggi muka air hilir (sungai) di atas mercu; negatif = di bawah mercu', unit: 'm', val: fmt(wd.H2, 3) },
     { sym: S.Cw, arti: 'koefisien debit ambang', unit: 'm½/s', val: fmt(wd.Cw, 2) },
     { sym: S.Lw, arti: 'lebar ambang', unit: 'm', val: fmt(wd.Lw, 2) },
-    { sym: mi('r'), arti: 'rasio terendam (hilir/hulu)', unit: '–', val: fmt(wd.ratio, 3) },
+    {
+      sym: mi('r'),
+      arti: wd.forward ? 'rasio terendam H₂/H₁ (hilir/hulu)' : 'rasio terendam H₁/H₂ (aliran balik)',
+      unit: '–',
+      val: wd.Hup > 0 ? (wd.ratio > 0 ? fmt(wd.ratio, 3) : `${fmt(wd.ratio, 2)} (≤ 0: bebas)`) : '–',
+    },
     { sym: Sfn(mi('r')), arti: 'faktor peredaman Villemonte', unit: '–', val: fmt(wd.S, 3) },
     { sym: S.Q, arti: 'debit (+ ke sungai, − aliran balik)', unit: 'm³/s', val: fmt(wd.Q, 4) },
   ]);
@@ -204,7 +213,7 @@ export function live(c) {
     rl.push(line(S.hr, null, `${fmt(wd.hr, 3)} m`));
   } else {
     const lin = c.river.zR0 + rv.gR * c.river.Er; // tampilan substitusi (8.7) sebelum dibatasi
-    rl.push(line(S.Er, null, `${fmt(c.river.Er, 2)} mm/hari`, { note: `rata-rata eksponensial hujan, ${im(S.tauR)} = ${fmt(rv.tauR, 0)} hari` }));
+    rl.push(line(S.Er, null, `${fmt(c.river.Er, 2)} mm/hari`, { note: `rata-rata eksponensial hujan, konstanta waktu ${im(S.tauR)} = ${fmt(rv.tauR, 0)} hari` }));
     rl.push(line(row(S.zR0, mo('+'), S.gR, S.Er), row(nmp(c.river.zR0, 2), mo('+'), nm(rv.gR, 2), mo('×'), nm(c.river.Er, 2)), `${fmt(lin, 3)} m`));
     rl.push(line(S.hr, fn('min', [nm(lin, 3), nm(rv.zRMax, 2)], ';'), `${fmt(wd.hr, 3)} m`, { note: wd.hr >= rv.zRMax - 1e-9 ? 'dibatasi z<sub>R,maks</sub>' : '' }));
   }
@@ -224,7 +233,7 @@ export function live(c) {
   const al = [];
   al.push(
     textLine(
-      `Mode: <strong>${st.mode === 'auto' ? 'Otomatis' : 'Manual'}</strong> · papan ${st.nLogs} · mercu ${fmt(st.crestM, 2)} m · pintu klep ${st.flapGate ? 'terpasang' : 'tidak'} · TMAS ${fmt(c.snap.canal.tmasCm, 1)} cm (${esc(c.snap.canal.tmasCls.label)})`,
+      `Mode: <strong>${st.mode === 'auto' ? 'Otomatis' : 'Manual'}</strong> · papan ${st.nLogs} · mercu ${fmt(st.crestM, 2)} m · pintu klep ${st.flapGate ? 'terpasang' : 'tidak terpasang'} · TMAS ${fmt(c.snap.canal.tmasCm, 1)} cm (${esc(c.snap.canal.tmasCls.label)})`,
     ),
   );
   if (st.mode === 'auto') {
@@ -249,14 +258,28 @@ export function live(c) {
 export function plots(c) {
   const wd = c.e.weir;
   const r = c.rating;
+  const series = [{ x: r.H, y: r.Q, color: '--series-q', width: 2 }];
+  // sungai di atas mercu: kurva Q(H₁) untuk muka air sungai saat ini (terendam / aliran balik), dari weirQ model
+  let qLo = Math.min(0, wd.Q);
+  if (wd.H2 > 0) {
+    // grid H ditambah H₁ dan H₂ saat ini: kurva melewati titik operasi dan titik Q = 0 dengan tepat (Villemonte curam di r → 1)
+    const top = r.H.at(-1);
+    const hs = [...new Set([...r.H, wd.H1, wd.H2].filter((h) => h >= 0 && h <= top))].sort((a, b) => a - b);
+    const qs = hs.map((h) => weirQ(wd.crest + h, wd.hr, wd.crest, c.params.weir, wd.flapGate));
+    series.push({ x: hs, y: qs, color: '--series-tmas', width: 2, dash: true });
+    qLo = Math.min(qLo, ...qs);
+  }
   const qMax = Math.max(...r.Q, wd.Q, 0.01);
-  const qMin = Math.min(0, wd.Q);
+  const qMin = qLo < 0 ? qLo - 0.05 * (qMax - qLo) : 0;
+  const lines = [];
+  if (qMin < 0) lines.push({ y: 0, color: '--series-muted' });
   return {
     'pa-rating': {
       x: { min: 0, max: r.H.at(-1), label: 'H₁ = hc − mercu (m)' },
       y: { min: qMin, max: qMax * 1.08, label: 'Q (m³/s)' },
-      series: [{ x: r.H, y: r.Q, color: '--series-q', width: 2 }],
-      hlines: qMin < 0 ? [{ y: 0, color: '--series-muted' }] : [],
+      series,
+      hlines: lines,
+      vlines: wd.H2 > 0 ? [{ x: wd.H2, color: '--series-tmas', dash: true, label: 'H₂ (sungai)' }] : [],
       points: [
         {
           x: Math.max(wd.H1, 0),
